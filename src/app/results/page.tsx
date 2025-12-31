@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import ResultsCanvas from "@/components/features/media/ResultsCanvas";
 
 export default function ResultsPage() {
     const router = useRouter();
@@ -75,31 +76,12 @@ export default function ResultsPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full min-h-[600px]">
                     <div className="lg:col-span-8 flex flex-col gap-4">
                         <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-surface-dark group shadow-2xl">
-                            <div
-                                className="absolute inset-0 bg-cover bg-center opacity-80"
-                                style={{
-                                    backgroundImage:
-                                        'url("https://lh3.googleusercontent.com/aida-public/AB6AXuBq9gvOnrKa_ap4I-A_9QP9tDU-eo6CJJDNbz7UF5pV9Qq6by2DeSK1ipYY3KkG7D0Rb02Thpej4EXaVZ_Yrl2BRLZPH1PFmqE4bhvVGehzYB-RvvusWPuerKPZjWTRVSkQxWzFNBVRPW2zvh9XSpCtnHUizK83UJjdRSlL3DleAlMmbCu1DnzV5u4yi-_BkKcm7RGNcErH5d1nxAzNI2PAqWVx-jPK7ekczXo8lpAUb7kWvzyN4m61x4WC8GqNNl_FYtOFZBdYstz8")',
-                                }}
-                            ></div>
-                            {/* Overlay Example 1 */}
-                            <div className="absolute top-[20%] left-[42%] w-[16%] h-[28%] border-2 border-primary rounded-lg opacity-80 shadow-[0_0_15px_rgba(19,236,91,0.3)] pointer-events-none transition-all duration-300">
-                                <div className="absolute -top-6 left-0 bg-primary text-black text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-wider whitespace-nowrap">
-                                    Eye Contact: Good
-                                </div>
-                                {/* Corners */}
-                                <div className="absolute -top-1 -left-1 w-2 h-2 border-t-2 border-l-2 border-primary"></div>
-                                <div className="absolute -top-1 -right-1 w-2 h-2 border-t-2 border-r-2 border-primary"></div>
-                                <div className="absolute -bottom-1 -left-1 w-2 h-2 border-b-2 border-l-2 border-primary"></div>
-                                <div className="absolute -bottom-1 -right-1 w-2 h-2 border-b-2 border-r-2 border-primary"></div>
+                            {/* Dynamic Canvas Layer */}
+                            <div className="absolute inset-0 z-0">
+                                <ResultsCanvas imageSrc="https://lh3.googleusercontent.com/aida-public/AB6AXuBq9gvOnrKa_ap4I-A_9QP9tDU-eo6CJJDNbz7UF5pV9Qq6by2DeSK1ipYY3KkG7D0Rb02Thpej4EXaVZ_Yrl2BRLZPH1PFmqE4bhvVGehzYB-RvvusWPuerKPZjWTRVSkQxWzFNBVRPW2zvh9XSpCtnHUizK83UJjdRSlL3DleAlMmbCu1DnzV5u4yi-_BkKcm7RGNcErH5d1nxAzNI2PAqWVx-jPK7ekczXo8lpAUb7kWvzyN4m61x4WC8GqNNl_FYtOFZBdYstz8" />
                             </div>
-                            {/* Overlay Example 2 */}
-                            <div className="hidden absolute bottom-[10%] right-[20%] w-[15%] h-[25%] border-2 border-yellow-500 border-dashed rounded opacity-60 pointer-events-none">
-                                <div className="absolute -top-6 right-0 bg-yellow-500 text-black text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase">
-                                    Repetitive
-                                </div>
-                            </div>
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:opacity-100 transition-opacity">
+
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:opacity-100 transition-opacity z-10">
                                 <button className="flex items-center justify-center rounded-full size-20 bg-primary/90 text-background-dark shadow-lg backdrop-blur-sm pointer-events-auto hover:scale-110 transition-transform">
                                     <span className="material-symbols-outlined text-[40px] fill-current">
                                         play_arrow

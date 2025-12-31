@@ -5,9 +5,15 @@ import { cn } from "@/lib/utils";
 
 interface CameraPreviewProps {
     showOverlays?: boolean;
+    onPermissionChange?: (allowed: boolean) => void;
+    onStream?: (stream: MediaStream) => void;
 }
 
-export function CameraPreview({ showOverlays = true }: CameraPreviewProps) {
+export function CameraPreview({
+    showOverlays = true,
+    onPermissionChange,
+    onStream
+}: CameraPreviewProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [permissionError, setPermissionError] = useState(false);
 
@@ -22,9 +28,12 @@ export function CameraPreview({ showOverlays = true }: CameraPreviewProps) {
                     videoRef.current.srcObject = stream;
                 }
                 setPermissionError(false);
+                onPermissionChange?.(true);
+                onStream?.(stream);
             } catch (err) {
                 console.error("Camera access denied:", err);
                 setPermissionError(true);
+                onPermissionChange?.(false);
             }
         }
 

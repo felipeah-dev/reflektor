@@ -1,13 +1,14 @@
-"use client";
-
 import Link from "next/link";
+import { useState } from "react";
 import { CameraPreview } from "@/components/features/media/CameraPreview";
 import { AudioVisualizer } from "@/components/features/media/AudioVisualizer";
 import { useSearchParams } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 export default function SetupPage() {
     const searchParams = useSearchParams();
     const scenario = searchParams.get("scenario") || "custom";
+    const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
 
     return (
         <div className="bg-background-dark min-h-screen flex flex-col font-display text-white">
@@ -44,7 +45,7 @@ export default function SetupPage() {
                         </p>
                     </div>
                     {/* Video Container */}
-                    <CameraPreview />
+                    <CameraPreview onPermissionChange={setHasCameraPermission} />
                     {/* Device Selectors */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
                         <label className="flex flex-col gap-2">
@@ -106,13 +107,18 @@ export default function SetupPage() {
                         <div className="flex flex-col gap-4">
                             {/* Item 1: Camera */}
                             <div className="flex items-start gap-3">
-                                <div className="shrink-0 size-5 rounded-full bg-primary flex items-center justify-center text-background-dark mt-0.5">
+                                <div className={cn(
+                                    "shrink-0 size-5 rounded-full flex items-center justify-center text-background-dark mt-0.5 transition-colors",
+                                    hasCameraPermission === true ? "bg-primary" : "bg-gray-600"
+                                )}>
                                     <span className="material-symbols-outlined !text-sm font-bold">
-                                        check
+                                        {hasCameraPermission === true ? "check" : "close"}
                                     </span>
                                 </div>
                                 <div>
-                                    <p className="text-sm font-bold text-white">Camera detected</p>
+                                    <p className="text-sm font-bold text-white">
+                                        {hasCameraPermission === true ? "Camera detected" : hasCameraPermission === false ? "Camera access denied" : "Detecting camera..."}
+                                    </p>
                                     <p className="text-xs text-[#9db9a6]">
                                         Fluid video at 30fps
                                     </p>
@@ -147,11 +153,16 @@ export default function SetupPage() {
                                 </div>
                             </div>
                             {/* Item 4: Framing */}
-                            <div className="flex items-start gap-3">
-                                <div className="shrink-0 size-5 rounded-full bg-primary flex items-center justify-center text-background-dark mt-0.5">
-                                    <span className="material-symbols-outlined !text-sm font-bold">
-                                        check
-                                    </span>
+                            <div className="flex items-start gap-3 transition-opacity duration-300" style={{ opacity: hasCameraPermission === true ? 1 : 0.4 }}>
+                                <div className={cn(
+                                    "shrink-0 size-5 rounded-full flex items-center justify-center text-background-dark mt-0.5",
+                                    hasCameraPermission === true ? "bg-primary" : "border-2 border-gray-400 dark:border-[#3b5443]"
+                                )}>
+                                    {hasCameraPermission === true && (
+                                        <span className="material-symbols-outlined !text-sm font-bold">
+                                            check
+                                        </span>
+                                    )}
                                 </div>
                                 <div>
                                     <p className="text-sm font-bold">Face Centered</p>
@@ -162,15 +173,29 @@ export default function SetupPage() {
                     {/* Action Area */}
                     <div className="flex flex-col gap-3">
                         <Link
-                            href={`/recording?scenario=${scenario}`}
-                            className="w-full bg-primary hover:bg-green-400 text-background-dark font-display font-bold text-lg h-14 rounded-lg shadow-[0_0_20px_rgba(19,236,91,0.3)] hover:shadow-[0_0_30px_rgba(19,236,91,0.5)] transition-all flex items-center justify-center gap-2 group/btn"
+                            href={hasCameraPermission ? `/recording?scenario=${scenario}` : "#"}
+                            className={cn(
+                                "w-full font-display font-bold text-lg h-14 rounded-lg transition-all flex items-center justify-center gap-2 group/btn",
+                                hasCameraPermission
+                                    ? "bg-primary hover:bg-green-400 text-background-dark shadow-[0_0_20px_rgba(19,236,91,0.3)] hover:shadow-[0_0_30px_rgba(19,236,91,0.5)]"
+                                    : "bg-gray-700 text-gray-400 cursor-not-allowed opacity-70"
+                            )}
+                            onClick={(e) => !hasCameraPermission && e.preventDefault()}
                         >
-                            <div className="size-3 rounded-full bg-red-600 animate-pulse"></div>
+                            <div className={cn(
+                                "size-3 rounded-full animate-pulse",
+                                hasCameraPermission ? "bg-red-600" : "bg-gray-500"
+                            )}></div>
                             START RECORDING
                             <span className="material-symbols-outlined transition-transform group-hover/btn:translate-x-1">
                                 arrow_forward
                             </span>
                         </Link>
+                        {hasCameraPermission === false && (
+                            <p className="text-[10px] text-center text-red-400 font-medium">
+                                Please enable camera access to continue
+                            </p>
+                        )}
                         <p className="text-xs text-center text-[#9db9a6]">
                             By continuing, you accept that the session will be analyzed by our
                             AI.
