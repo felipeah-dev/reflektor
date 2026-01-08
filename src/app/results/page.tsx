@@ -1,14 +1,114 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ResultsCanvas from "@/components/features/media/ResultsCanvas";
 import { Logo } from "@/components/ui/Logo";
+import { cn } from "@/lib/utils";
+
+import { sessionStore } from "@/lib/sessionStore";
+
 
 
 
 export default function ResultsPage() {
     const router = useRouter();
+    const [session, setSession] = useState<any>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [videoDuration, setVideoDuration] = useState(0);
+    const [isMuted, setIsMuted] = useState(false);
+    const videoContainerRef = useRef<HTMLDivElement>(null);
+
+
+    useEffect(() => {
+        const data = sessionStore.getSession();
+        if (data) {
+            setSession(data);
+        }
+    }, []);
+
+    const togglePlay = () => {
+        if (videoRef.current) {
+            if (isPlaying) {
+                videoRef.current.pause();
+            } else {
+                videoRef.current.play();
+            }
+        }
+    };
+
+    const handleTimeUpdate = () => {
+        if (videoRef.current) {
+            setCurrentTime(videoRef.current.currentTime);
+        }
+    };
+
+    const handleLoadedMetadata = () => {
+        if (videoRef.current) {
+            let duration = videoRef.current.duration;
+            // Handle Infinity duration often found in WebM blobs
+            if (duration === Infinity && session?.duration) {
+                duration = session.duration;
+            }
+            setVideoDuration(duration);
+
+            // Fix for WebM duration being Infinity: seek to end and back
+            if (videoRef.current.duration === Infinity) {
+                const v = videoRef.current;
+                v.currentTime = 1e10;
+                v.ontimeupdate = () => {
+                    v.ontimeupdate = handleTimeUpdate;
+                    v.currentTime = 0;
+                };
+            }
+
+        }
+    };
+
+
+    const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (videoRef.current && videoDuration > 0 && isFinite(videoDuration)) {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const percentage = Math.max(0, Math.min(1, x / rect.width));
+            const newTime = percentage * videoDuration;
+            if (isFinite(newTime)) {
+                videoRef.current.currentTime = newTime;
+            }
+        }
+    };
+
+
+    const toggleFullscreen = () => {
+        if (!videoContainerRef.current) return;
+        if (!document.fullscreenElement) {
+            videoContainerRef.current.requestFullscreen();
+        } else {
+            document.exitFullscreen();
+        }
+    };
+
+    const formatTimeFull = (timeInSeconds: number) => {
+        const t = isNaN(timeInSeconds) ? 0 : timeInSeconds;
+        const mins = Math.floor(t / 60);
+        const secs = Math.floor(t % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+
+    const formatDuration = (secs: number) => {
+        const d = isNaN(secs) ? 0 : secs;
+        const m = Math.floor(d / 60);
+        const s = Math.floor(d % 60);
+        return `${m}m ${s}s`;
+    };
+
+
+
 
     return (
         <div className="bg-background-dark font-display text-white overflow-x-hidden min-h-screen flex flex-col">
@@ -65,33 +165,64 @@ export default function ResultsPage() {
                             <span className="material-symbols-outlined text-lg">
                                 calendar_today
                             </span>
-                            <span>24 Oct, 2026</span>
+                            <span>{session ? new Date(session.timestamp).toLocaleDateString() : '24 Oct, 2026'}</span>
                             <span className="w-1 h-1 rounded-full bg-surface-hover"></span>
                             <span className="material-symbols-outlined text-lg">schedule</span>
-                            <span>2m 23s</span>
+                            <span>{session ? formatDuration(session.duration) : '2m 23s'}</span>
+
                         </div>
                     </div>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full min-h-[600px]">
                     <div className="lg:col-span-8 flex flex-col gap-4">
-                        <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-surface-dark group shadow-2xl">
-                            {/* Dynamic Canvas Layer */}
-                            <div className="absolute inset-0 z-0">
-                                <ResultsCanvas imageSrc="https://lh3.googleusercontent.com/aida-public/AB6AXuBq9gvOnrKa_ap4I-A_9QP9tDU-eo6CJJDNbz7UF5pV9Qq6by2DeSK1ipYY3KkG7D0Rb02Thpej4EXaVZ_Yrl2BRLZPH1PFmqE4bhvVGehzYB-RvvusWPuerKPZjWTRVSkQxWzFNBVRPW2zvh9XSpCtnHUizK83UJjdRSlL3DleAlMmbCu1DnzV5u4yi-_BkKcm7RGNcErH5d1nxAzNI2PAqWVx-jPK7ekczXo8lpAUb7kWvzyN4m61x4WC8GqNNl_FYtOFZBdYstz8" />
-                            </div>
+                        <div ref={videoContainerRef} className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-surface-dark group shadow-2xl">
+                            {/* Dynamic Canvas Layer or Real Video */}
+                            {session?.videoUrl ? (
+                                <video
+                                    ref={videoRef}
+                                    src={session.videoUrl}
+                                    className="w-full h-full object-contain"
+                                    onPlay={() => setIsPlaying(true)}
+                                    onPause={() => setIsPlaying(false)}
+                                    onTimeUpdate={handleTimeUpdate}
+                                    onLoadedMetadata={handleLoadedMetadata}
+                                    muted={isMuted}
+                                    onClick={togglePlay}
+                                />
 
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:opacity-100 transition-opacity z-10">
-                                <button className="flex items-center justify-center rounded-full size-20 bg-primary/90 text-background-dark shadow-lg backdrop-blur-sm pointer-events-auto hover:scale-110 transition-transform">
+
+                            ) : (
+                                <div className="absolute inset-0 z-0">
+                                    <ResultsCanvas imageSrc="https://lh3.googleusercontent.com/aida-public/AB6AXuBq9gvOnrKa_ap4I-A_9QP9tDU-eo6CJJDNbz7UF5pV9Qq6by2DeSK1ipYY3KkG7D0Rb02Thpej4EXaVZ_Yrl2BRLZPH1PFmqE4bhvVGehzYB-RvvusWPuerKPZjWTRVSkQxWzFNBVRPW2zvh9XSpCtnHUizK83UJjdRSlL3DleAlMmbCu1DnzV5u4yi-_BkKcm7RGNcErH5d1nxAzNI2PAqWVx-jPK7ekczXo8lpAUb7kWvzyN4m61x4WC8GqNNl_FYtOFZBdYstz8" />
+                                </div>
+                            )}
+
+                            <div className={cn(
+                                "absolute inset-0 flex items-center justify-center pointer-events-none transition-all duration-300 z-10",
+                                isPlaying ? "opacity-0 scale-150" : "opacity-100 scale-100"
+                            )}>
+                                <button
+                                    onClick={togglePlay}
+                                    className="flex items-center justify-center rounded-full size-20 bg-primary/90 text-background-dark shadow-lg backdrop-blur-sm pointer-events-auto hover:scale-110 active:scale-95 transition-transform"
+                                >
                                     <span className="material-symbols-outlined text-[40px] fill-current">
                                         play_arrow
                                     </span>
                                 </button>
                             </div>
+
+
                             {/* Controls */}
                             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent pt-12 pb-4 px-6 flex flex-col gap-2">
-                                <div className="relative h-6 flex items-center group/scrubber cursor-pointer">
+                                <div
+                                    className="relative h-6 flex items-center group/scrubber cursor-pointer"
+                                    onClick={handleSeek}
+                                >
                                     <div className="absolute w-full h-1.5 bg-white/20 rounded-full"></div>
-                                    <div className="absolute w-[26%] h-1.5 bg-primary rounded-full shadow-[0_0_10px_rgba(19,236,91,0.5)]"></div>
+                                    <div
+                                        className="absolute h-1.5 bg-primary rounded-full shadow-[0_0_10px_rgba(19,236,91,0.5)]"
+                                        style={{ width: `${(currentTime / (videoDuration || 1)) * 100}%` }}
+                                    ></div>
                                     {/* Markers */}
                                     <div
                                         className="absolute left-[15%] top-1/2 -translate-y-1/2 size-3 bg-primary rounded-full border-2 border-black z-10 hover:scale-150 transition-transform cursor-pointer"
@@ -109,37 +240,55 @@ export default function ResultsPage() {
                                         className="absolute left-[90%] top-1/2 -translate-y-1/2 size-3 bg-primary rounded-full border-2 border-black z-10 hover:scale-150 transition-transform cursor-pointer"
                                         title="Good Pace"
                                     ></div>
-                                    <div className="absolute left-[26%] top-1/2 -translate-y-1/2 size-4 bg-white rounded-full shadow-md z-20 cursor-grab active:cursor-grabbing hover:scale-110 transition-transform"></div>
+                                    <div
+                                        className="absolute size-4 bg-white rounded-full shadow-md z-20 cursor-grab active:cursor-grabbing hover:scale-110 transition-transform"
+                                        style={{ left: `${(currentTime / (videoDuration || 1)) * 100}%`, transform: 'translate(-50%, -50%)' }}
+                                    ></div>
                                 </div>
+
                                 <div className="flex items-center justify-between mt-1">
                                     <div className="flex items-center gap-4">
-                                        <button className="text-white hover:text-primary transition-colors">
-                                            <span className="material-symbols-outlined">pause</span>
+                                        <button
+                                            onClick={togglePlay}
+                                            className="text-white hover:text-primary transition-colors h-8 w-8 flex items-center justify-center rounded-full hover:bg-white/10"
+                                        >
+                                            <span className="material-symbols-outlined">{isPlaying ? 'pause' : 'play_arrow'}</span>
                                         </button>
-                                        <button className="text-white hover:text-primary transition-colors">
+                                        <button
+                                            onClick={() => videoRef.current && (videoRef.current.currentTime -= 10)}
+                                            className="text-white hover:text-primary transition-colors h-8 w-8 flex items-center justify-center rounded-full hover:bg-white/10"
+                                        >
                                             <span className="material-symbols-outlined">
                                                 replay_10
                                             </span>
                                         </button>
                                         <div className="text-xs font-mono font-medium tracking-wider">
-                                            <span className="text-white">0:37</span>{" "}
+                                            <span className="text-white">{formatTimeFull(currentTime)}</span>{" "}
                                             <span className="text-white/50">/</span>{" "}
-                                            <span className="text-white/50">2:23</span>
+                                            <span className="text-white/50">{formatTimeFull(videoDuration)}</span>
                                         </div>
                                     </div>
+
                                     <div className="flex items-center gap-4">
-                                        <button className="text-white hover:text-primary transition-colors">
+                                        <button
+                                            onClick={() => setIsMuted(!isMuted)}
+                                            className="text-white hover:text-primary transition-colors h-8 w-8 flex items-center justify-center rounded-full hover:bg-white/10"
+                                        >
                                             <span className="material-symbols-outlined">
-                                                volume_up
+                                                {isMuted ? 'volume_off' : 'volume_up'}
                                             </span>
                                         </button>
-                                        <button className="text-white hover:text-primary transition-colors">
+                                        <button className="text-white hover:text-primary transition-colors h-8 w-8 flex items-center justify-center rounded-full hover:bg-white/10">
                                             <span className="material-symbols-outlined">settings</span>
                                         </button>
-                                        <button className="text-white hover:text-primary transition-colors">
+                                        <button
+                                            onClick={toggleFullscreen}
+                                            className="text-white hover:text-primary transition-colors h-8 w-8 flex items-center justify-center rounded-full hover:bg-white/10"
+                                        >
                                             <span className="material-symbols-outlined">fullscreen</span>
                                         </button>
                                     </div>
+
                                 </div>
                             </div>
                         </div>
@@ -313,15 +462,27 @@ export default function ResultsPage() {
                 </div>
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t border-surface-hover">
                     <div className="flex gap-4 w-full md:w-auto">
-                        <button className="flex-1 md:flex-none flex items-center justify-center gap-2 rounded-lg h-12 px-6 border border-surface-hover bg-surface-dark hover:bg-surface-hover hover:border-muted transition-all text-white font-bold tracking-wide">
+                        <button
+                            onClick={() => alert("Share feature coming soon! (Blob URL: " + session?.videoUrl + ")")}
+                            className="flex-1 md:flex-none flex items-center justify-center gap-2 rounded-lg h-12 px-6 border border-surface-hover bg-surface-dark hover:bg-surface-hover hover:border-muted transition-all text-white font-bold tracking-wide"
+                        >
                             <span className="material-symbols-outlined text-[20px]">share</span>
                             <span>Share</span>
                         </button>
-                        <button className="flex-1 md:flex-none flex items-center justify-center gap-2 rounded-lg h-12 px-6 bg-white hover:bg-gray-200 text-background-dark transition-all font-bold tracking-wide shadow-lg hover:shadow-xl hover:scale-105 active:scale-95">
-                            <span className="material-symbols-outlined text-[20px]">picture_as_pdf</span>
-                            <span>Export PDF</span>
+                        <button
+                            onClick={() => {
+                                const a = document.createElement('a');
+                                a.href = session?.videoUrl;
+                                a.download = `reflektor-practice-${Date.now()}.webm`;
+                                a.click();
+                            }}
+                            className="flex-1 md:flex-none flex items-center justify-center gap-2 rounded-lg h-12 px-6 bg-white hover:bg-gray-200 text-background-dark transition-all font-bold tracking-wide shadow-lg hover:shadow-xl hover:scale-105 active:scale-95"
+                        >
+                            <span className="material-symbols-outlined text-[20px]">download</span>
+                            <span>Download Video</span>
                         </button>
                     </div>
+
                     <button onClick={() => router.push('/action')} className="w-full md:w-auto flex items-center justify-center gap-2 rounded-lg h-12 px-8 bg-primary hover:bg-[#0fdc50] text-background-dark transition-all font-bold tracking-wide shadow-[0_0_20px_rgba(19,236,91,0.3)] hover:shadow-[0_0_25px_rgba(19,236,91,0.5)] hover:scale-105 active:scale-95 group">
                         <span>Finish Review</span>
                         <span className="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">arrow_forward</span>

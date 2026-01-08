@@ -1,11 +1,16 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
+
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { CameraPreview } from "@/components/features/media/CameraPreview";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/Logo";
+import { useMediaRecorder } from "@/hooks/useMediaRecorder";
+import { sessionStore } from "@/lib/sessionStore";
+
+
 
 
 
@@ -18,6 +23,11 @@ function RecordingContent() {
 
     const [micEnabled, setMicEnabled] = useState(true);
     const [cameraEnabled, setCameraEnabled] = useState(true);
+    const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
+    const { startRecording, stopRecording, status, recordedBlob } = useMediaRecorder();
+    const isRecordingStarted = useRef(false);
+
+
 
 
     useEffect(() => {
@@ -26,6 +36,27 @@ function RecordingContent() {
         }, 1000);
         return () => clearInterval(interval);
     }, []);
+
+    useEffect(() => {
+        if (activeStream && !isRecordingStarted.current) {
+            startRecording(activeStream);
+            isRecordingStarted.current = true;
+        }
+    }, [activeStream, startRecording]);
+
+    useEffect(() => {
+        if (status === 'stopped' && recordedBlob) {
+            sessionStore.setSession({
+                videoBlob: recordedBlob,
+                videoUrl: URL.createObjectURL(recordedBlob),
+                duration: seconds,
+                timestamp: Date.now()
+            });
+            router.push("/processing");
+        }
+    }, [status, recordedBlob, router, seconds]);
+
+
 
     const formatTime = (totalSeconds: number) => {
         const mins = Math.floor(totalSeconds / 60)
@@ -36,8 +67,10 @@ function RecordingContent() {
     };
 
     const handleStop = () => {
-        router.push("/processing");
+        stopRecording();
     };
+
+
 
     return (
         <div className="bg-background-dark text-white h-screen flex flex-col overflow-hidden font-display selection:bg-primary selection:text-background-dark">
@@ -69,7 +102,9 @@ function RecordingContent() {
                             audioDeviceId={audioDeviceId}
                             onToggleVideo={() => setCameraEnabled(!cameraEnabled)}
                             onToggleAudio={() => setMicEnabled(!micEnabled)}
+                            onStream={setActiveStream}
                         />
+
 
 
                     </div>
@@ -105,7 +140,13 @@ function RecordingContent() {
                         <div className="flex items-baseline gap-1 font-variant-numeric tabular-nums text-white text-5xl md:text-7xl font-light tracking-tighter drop-shadow-lg">
                             <span>{formatTime(seconds)}</span>
                         </div>
+                        {status === 'stopped' && (
+                            <div className="mt-4 text-primary text-sm font-bold animate-pulse">
+                                Processing media chunks...
+                            </div>
+                        )}
                     </div>
+
                 </div>
                 {/* Control Bar (Bottom Floating) */}
                 <div className="mt-8 flex flex-col md:flex-row items-center gap-6 md:gap-12 w-full max-w-3xl justify-center z-10">
