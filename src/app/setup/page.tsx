@@ -1,34 +1,54 @@
 "use client";
 
 import Link from "next/link";
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { CameraPreview } from "@/components/features/media/CameraPreview";
 import { AudioVisualizer } from "@/components/features/media/AudioVisualizer";
 import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { Logo } from "@/components/ui/Logo";
+
 
 function SetupContent() {
     const searchParams = useSearchParams();
     const scenario = searchParams.get("scenario") || "custom";
     const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
     const [hasMicPermission, setHasMicPermission] = useState<boolean | null>(null);
+    const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
+
+    const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+    const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
+    const [selectedVideoId, setSelectedVideoId] = useState<string>("");
+    const [selectedAudioId, setSelectedAudioId] = useState<string>("");
+    const [micEnabled, setMicEnabled] = useState(true);
+    const [cameraEnabled, setCameraEnabled] = useState(true);
 
     const isReady = hasCameraPermission === true && hasMicPermission === true;
+
+
+    useEffect(() => {
+        if (hasCameraPermission || hasMicPermission) {
+            navigator.mediaDevices.enumerateDevices().then(devices => {
+                const video = devices.filter(d => d.kind === "videoinput");
+                const audio = devices.filter(d => d.kind === "audioinput");
+                setVideoDevices(video);
+                setAudioDevices(audio);
+
+                // Set defaults if not selected
+                if (!selectedVideoId && video.length > 0) setSelectedVideoId(video[0].deviceId);
+                if (!selectedAudioId && audio.length > 0) setSelectedAudioId(audio[0].deviceId);
+            });
+        }
+    }, [hasCameraPermission, hasMicPermission]);
+
+
 
     return (
         <div className="bg-background-dark min-h-screen flex flex-col font-display text-white">
             {/* Top Navigation */}
             <header className="flex items-center justify-between whitespace-nowrap border-b border-[#28392e] px-4 lg:px-10 py-4 bg-background-dark sticky top-0 z-50">
-                <div className="flex items-center gap-3">
-                    <div className="size-6 text-primary">
-                        <span className="material-symbols-outlined !text-2xl">
-                            graphic_eq
-                        </span>
-                    </div>
-                    <h2 className="text-lg lg:text-xl font-bold tracking-tight">
-                        REFLEKTOR
-                    </h2>
-                </div>
+                <Logo />
+
                 <Link
                     href="/"
                     className="flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-[#28392e] hover:bg-[#3b5443] transition-colors text-sm font-bold text-white"
@@ -53,7 +73,17 @@ function SetupContent() {
                     <CameraPreview
                         onPermissionChange={setHasCameraPermission}
                         onMicPermissionChange={setHasMicPermission}
+                        onStream={setActiveStream}
+                        videoDeviceId={selectedVideoId}
+                        audioDeviceId={selectedAudioId}
+                        videoEnabled={cameraEnabled}
+                        audioEnabled={micEnabled}
+                        onToggleVideo={() => setCameraEnabled(!cameraEnabled)}
+                        onToggleAudio={() => setMicEnabled(!micEnabled)}
                     />
+
+
+
                     {/* Device Selectors */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
                         <label className="flex flex-col gap-2 transition-opacity" style={{ opacity: hasCameraPermission === true ? 1 : 0.6 }}>
@@ -66,10 +96,17 @@ function SetupContent() {
                                         videocam
                                     </span>
                                 </div>
-                                <select className="w-full pl-10 pr-4 py-3 rounded-lg bg-[#1c271f] border border-[#3b5443] text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary appearance-none cursor-pointer text-sm font-medium">
-                                    <option>FaceTime HD Camera</option>
-                                    <option>Logitech C920</option>
-                                    <option>OBS Virtual Camera</option>
+                                <select
+                                    value={selectedVideoId}
+                                    onChange={(e) => setSelectedVideoId(e.target.value)}
+                                    className="w-full pl-10 pr-10 py-3 rounded-lg bg-[#1c271f] border border-[#3b5443] text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary appearance-none cursor-pointer text-sm font-medium"
+                                >
+                                    {videoDevices.map(device => (
+                                        <option key={device.deviceId} value={device.deviceId}>
+                                            {device.label || `Camera ${device.deviceId.slice(0, 5)}`}
+                                        </option>
+                                    ))}
+                                    {videoDevices.length === 0 && <option>No cameras found</option>}
                                 </select>
                                 <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                                     <span className="material-symbols-outlined !text-xl">
@@ -88,10 +125,17 @@ function SetupContent() {
                                         mic
                                     </span>
                                 </div>
-                                <select className="w-full pl-10 pr-4 py-3 rounded-lg bg-[#1c271f] border border-[#3b5443] text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary appearance-none cursor-pointer text-sm font-medium">
-                                    <option>MacBook Pro Microphone</option>
-                                    <option>Blue Yeti X</option>
-                                    <option>AirPods Pro</option>
+                                <select
+                                    value={selectedAudioId}
+                                    onChange={(e) => setSelectedAudioId(e.target.value)}
+                                    className="w-full pl-10 pr-10 py-3 rounded-lg bg-[#1c271f] border border-[#3b5443] text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary appearance-none cursor-pointer text-sm font-medium"
+                                >
+                                    {audioDevices.map(device => (
+                                        <option key={device.deviceId} value={device.deviceId}>
+                                            {device.label || `Microphone ${device.deviceId.slice(0, 5)}`}
+                                        </option>
+                                    ))}
+                                    {audioDevices.length === 0 && <option>No microphones found</option>}
                                 </select>
                                 <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                                     <span className="material-symbols-outlined !text-xl">
@@ -100,6 +144,7 @@ function SetupContent() {
                                 </div>
                             </div>
                         </label>
+
                     </div>
                 </section>
                 {/* Right Column: Checklist & Actions */}
@@ -117,10 +162,10 @@ function SetupContent() {
                             <div className="flex items-start gap-3">
                                 <div className={cn(
                                     "shrink-0 size-5 rounded-full flex items-center justify-center text-background-dark mt-0.5 transition-colors",
-                                    hasCameraPermission === true ? "bg-primary" : "bg-gray-600"
+                                    hasCameraPermission === true ? "bg-primary" : hasCameraPermission === false ? "bg-red-500" : "bg-gray-600"
                                 )}>
                                     <span className="material-symbols-outlined !text-sm font-bold">
-                                        {hasCameraPermission === true ? "check" : "close"}
+                                        {hasCameraPermission === true ? "check" : hasCameraPermission === false ? "close" : "more_horiz"}
                                     </span>
                                 </div>
                                 <div>
@@ -131,29 +176,33 @@ function SetupContent() {
                                         Fluid video at 30fps
                                     </p>
                                 </div>
+
                             </div>
                             {/* Item 2: Audio Level */}
                             <div className="flex flex-col gap-2">
                                 <div className="flex items-start gap-3">
                                     <div className={cn(
                                         "shrink-0 size-5 rounded-full flex items-center justify-center text-background-dark mt-0.5 transition-colors",
-                                        hasMicPermission === true ? "bg-primary" : "bg-gray-600"
+                                        hasMicPermission === true ? "bg-primary" : hasMicPermission === false ? "bg-red-500" : "bg-gray-600"
                                     )}>
                                         <span className="material-symbols-outlined !text-sm font-bold">
-                                            {hasMicPermission === true ? "check" : "close"}
+                                            {hasMicPermission === true ? "check" : hasMicPermission === false ? "close" : "more_horiz"}
                                         </span>
                                     </div>
                                     <div className="flex-1">
                                         <div className="flex justify-between items-center mb-1">
-                                            <p className="text-sm font-bold">
+                                            <p className="text-sm font-bold text-white">
                                                 {hasMicPermission === true ? "Microphone active" : hasMicPermission === false ? "Mic access denied" : "Detecting audio..."}
                                             </p>
                                             {hasMicPermission === true && <span className="text-xs text-primary font-mono">OK</span>}
                                         </div>
-                                        {/* Visualizer Bars (Mock) */}
-                                        <div style={{ opacity: hasMicPermission === true ? 1 : 0.3 }}>
-                                            <AudioVisualizer />
+
+                                        {/* Visualizer Bars (Real-time) */}
+                                        <div style={{ opacity: (hasMicPermission === true && micEnabled) ? 1 : 0.3 }}>
+                                            <AudioVisualizer stream={activeStream} isMuted={!micEnabled} />
                                         </div>
+
+
                                     </div>
                                 </div>
                             </div>
@@ -188,7 +237,8 @@ function SetupContent() {
                     {/* Action Area */}
                     <div className="flex flex-col gap-3">
                         <Link
-                            href={isReady ? `/recording?scenario=${scenario}` : "#"}
+                            href={isReady ? `/recording?scenario=${scenario}&videoDeviceId=${selectedVideoId}&audioDeviceId=${selectedAudioId}` : "#"}
+
                             className={cn(
                                 "w-full font-display font-bold text-lg h-14 rounded-lg transition-all flex items-center justify-center gap-2 group/btn",
                                 isReady
@@ -207,10 +257,15 @@ function SetupContent() {
                             </span>
                         </Link>
                         {!isReady && (hasCameraPermission === false || hasMicPermission === false) && (
-                            <p className="text-[10px] text-center text-red-400 font-medium">
-                                Please enable both camera and mic access to continue
+                            <p className="text-[10px] text-center text-red-500 font-bold bg-red-500/10 py-2 px-3 rounded-lg border border-red-500/20">
+                                {hasCameraPermission === false && hasMicPermission === false
+                                    ? "Please enable both camera and mic access to continue"
+                                    : hasCameraPermission === false
+                                        ? "Please enable your camera to continue"
+                                        : "Please enable your microphone to continue"}
                             </p>
                         )}
+
                         <p className="text-xs text-center text-[#9db9a6]">
                             By continuing, you accept that the session will be analyzed by our
                             AI.

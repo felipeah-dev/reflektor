@@ -7,21 +7,45 @@ interface CameraPreviewProps {
     showOverlays?: boolean;
     onPermissionChange?: (allowed: boolean) => void;
     onMicPermissionChange?: (allowed: boolean) => void;
-    onStream?: (stream: MediaStream) => void;
+    onStream?: (stream: MediaStream | null) => void;
+    audioEnabled?: boolean;
+    videoEnabled?: boolean;
+    audioDeviceId?: string;
+    videoDeviceId?: string;
+    onToggleVideo?: () => void;
+    onToggleAudio?: () => void;
 }
+
+
 
 export function CameraPreview({
     showOverlays = true,
     onPermissionChange,
     onMicPermissionChange,
-    onStream
+    onStream,
+    audioEnabled = true,
+    videoEnabled = true,
+    audioDeviceId,
+    videoDeviceId,
+    onToggleVideo,
+    onToggleAudio
 }: CameraPreviewProps) {
+
+
     const videoRef = useRef<HTMLVideoElement>(null);
     const activeStreamRef = useRef<MediaStream | null>(null);
+    const isInitializingRef = useRef(false);
     const [permissionError, setPermissionError] = useState(false);
     const [errorName, setErrorName] = useState<string | null>(null);
+    const prevVideoDeviceIdRef = useRef<string | undefined>(videoDeviceId);
+    const prevAudioDeviceIdRef = useRef<string | undefined>(audioDeviceId);
+
+
 
     async function startCamera() {
+        if (isInitializingRef.current) return;
+        isInitializingRef.current = true;
+
         setErrorName(null);
         let stream: MediaStream | null = null;
         let videoOk = false;
@@ -29,26 +53,39 @@ export function CameraPreview({
 
         // Step 1: Try to get both together
         try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            const constraints: MediaStreamConstraints = {
+                video: videoDeviceId ? { deviceId: { exact: videoDeviceId } } : true,
+                audio: audioDeviceId ? { deviceId: { exact: audioDeviceId } } : true
+            };
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
             videoOk = true;
             audioOk = true;
         } catch (err: any) {
+
             console.warn("Combined hardware access failed, probing individually...", err.name);
-            setErrorName(err.name);
+            // Don't set errorName yet, let's see what happens with individual probes
 
             // Step 2: Probe Video
             try {
-                const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                const videoConstraints = videoDeviceId ? { deviceId: { exact: videoDeviceId } } : true;
+                const videoStream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
                 stream = videoStream;
                 videoOk = true;
             } catch (vErr: any) {
+
                 console.error("Video probe failed:", vErr);
                 videoOk = false;
+                setErrorName(vErr.name); // Set it here if video fails
             }
+
+            // Small delay to let the browser settle after a potential denial
+            await new Promise(resolve => setTimeout(resolve, 150));
 
             // Step 3: Probe Audio
             try {
-                const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const audioConstraints = audioDeviceId ? { deviceId: { exact: audioDeviceId } } : true;
+                const audioStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+
                 if (stream) {
                     audioStream.getTracks().forEach(t => stream?.addTrack(t));
                 } else {
@@ -56,10 +93,13 @@ export function CameraPreview({
                 }
                 audioOk = true;
             } catch (aErr: any) {
+
                 console.error("Audio probe failed:", aErr);
                 audioOk = false;
+                // If video worked but audio failed, we might want to know, but video usually takes precedence for the overlay
             }
         }
+
 
         if (stream) {
             activeStreamRef.current = stream;
@@ -68,21 +108,13 @@ export function CameraPreview({
             }
 
             stream.getTracks().forEach(track => {
-                const handleStateChange = () => {
-                    const isAnyProblem = !track.enabled || track.muted || track.readyState === 'ended';
-                    if (track.kind === 'video') {
-                        const isProblem = isAnyProblem;
-                        setPermissionError(isProblem);
-                        if (isProblem) setErrorName(track.readyState === 'ended' ? "TrackEnded" : "TrackDisabled");
-                        onPermissionChange?.(!isProblem);
-                    } else if (track.kind === 'audio') {
-                        onMicPermissionChange?.(!isAnyProblem);
-                    }
-                };
-                track.onended = handleStateChange;
-                track.onmute = handleStateChange;
-                track.onunmute = handleStateChange;
+                // Initial state
+                if (track.kind === 'video') track.enabled = videoEnabled;
+                if (track.kind === 'audio') track.enabled = audioEnabled;
+
+                setupTrackListeners(track);
             });
+
 
             onStream?.(stream);
         }
@@ -90,11 +122,87 @@ export function CameraPreview({
         setPermissionError(!videoOk);
         onPermissionChange?.(videoOk);
         onMicPermissionChange?.(audioOk);
+        isInitializingRef.current = false;
     }
 
     useEffect(() => {
-        startCamera();
+        const videoChanged = prevVideoDeviceIdRef.current !== videoDeviceId;
+        const audioChanged = prevAudioDeviceIdRef.current !== audioDeviceId;
 
+        prevVideoDeviceIdRef.current = videoDeviceId;
+        prevAudioDeviceIdRef.current = audioDeviceId;
+
+        if (activeStreamRef.current && (videoChanged || audioChanged)) {
+            // Surgical update
+            const updateTracks = async () => {
+                const stream = activeStreamRef.current;
+                if (!stream) return;
+
+                if (videoChanged) {
+                    // Stop old video tracks
+                    stream.getVideoTracks().forEach(t => {
+                        t.stop();
+                        stream.removeTrack(t);
+                    });
+                    try {
+                        const vConstraints = videoDeviceId ? { deviceId: { exact: videoDeviceId } } : true;
+                        const newVideoStream = await navigator.mediaDevices.getUserMedia({ video: vConstraints });
+                        const newTrack = newVideoStream.getVideoTracks()[0];
+                        if (newTrack) {
+                            newTrack.enabled = videoEnabled;
+                            stream.addTrack(newTrack);
+                            setupTrackListeners(newTrack);
+                        }
+                    } catch (e) {
+                        console.error("Failed to switch video track:", e);
+                        setErrorName("SwitchFailed");
+                    }
+                }
+
+                if (audioChanged) {
+                    // Stop old audio tracks
+                    stream.getAudioTracks().forEach(t => {
+                        t.stop();
+                        stream.removeTrack(t);
+                    });
+                    try {
+                        const aConstraints = audioDeviceId ? { deviceId: { exact: audioDeviceId } } : true;
+                        const newAudioStream = await navigator.mediaDevices.getUserMedia({ audio: aConstraints });
+                        const newTrack = newAudioStream.getAudioTracks()[0];
+                        if (newTrack) {
+                            newTrack.enabled = audioEnabled;
+                            stream.addTrack(newTrack);
+                            setupTrackListeners(newTrack);
+                        }
+                    } catch (e) {
+                        console.error("Failed to switch audio track:", e);
+                    }
+                }
+
+                // Re-trigger onStream to notify parents of track changes
+                const updatedStream = new MediaStream(stream.getTracks());
+                activeStreamRef.current = updatedStream;
+                if (videoRef.current) {
+                    videoRef.current.srcObject = updatedStream;
+                }
+                onStream?.(updatedStream);
+            };
+
+            updateTracks();
+
+        } else if (!activeStreamRef.current) {
+            startCamera();
+        }
+
+        return () => {
+            // Cleanup only on unmount (or when effect deps require full reset if we wanted to, but we handle surgically now)
+            // However, the standard React way is cleanup on every change. 
+            // To prevent cleanup on every change we need to manage the lifecycle carefully.
+        };
+    }, [videoDeviceId, audioDeviceId]);
+
+    // Separate effect for full cleanup on unmount only
+    useEffect(() => {
         return () => {
             if (activeStreamRef.current) {
                 activeStreamRef.current.getTracks().forEach((track) => {
@@ -104,12 +212,43 @@ export function CameraPreview({
                     track.onunmute = null;
                 });
                 activeStreamRef.current = null;
+                onStream?.(null);
             }
             if (videoRef.current) {
                 videoRef.current.srcObject = null;
             }
         };
     }, []);
+
+    function setupTrackListeners(track: MediaStreamTrack) {
+        const handleStateChange = () => {
+            const isAnyProblem = !track.enabled || track.muted || track.readyState === 'ended';
+            if (track.kind === 'video') {
+                const isProblem = isAnyProblem && videoEnabled;
+                setPermissionError(isProblem);
+                if (isProblem) setErrorName(track.readyState === 'ended' ? "TrackEnded" : "TrackDisabled");
+                onPermissionChange?.(!isProblem);
+            } else if (track.kind === 'audio') {
+                onMicPermissionChange?.(!isAnyProblem || !audioEnabled);
+            }
+        };
+        track.onended = handleStateChange;
+        track.onmute = handleStateChange;
+        track.onunmute = handleStateChange;
+    }
+
+
+
+    // Handle Toggles
+    useEffect(() => {
+        if (activeStreamRef.current) {
+            activeStreamRef.current.getTracks().forEach(track => {
+                if (track.kind === 'video') track.enabled = videoEnabled;
+                if (track.kind === 'audio') track.enabled = audioEnabled;
+            });
+        }
+    }, [videoEnabled, audioEnabled]);
+
 
     return (
         <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl ring-1 ring-gray-200 dark:ring-[#28392e] group">
@@ -186,17 +325,26 @@ export function CameraPreview({
                     {/* Bottom Controls Overlay */}
                     <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent flex justify-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                         <button
+                            onClick={(e) => { e.stopPropagation(); onToggleVideo?.(); }}
                             className="p-2 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white transition-colors"
-                            title="Toggle Camera"
+                            title={videoEnabled ? "Disable Camera" : "Enable Camera"}
                         >
-                            <span className="material-symbols-outlined">videocam_off</span>
+                            <span className="material-symbols-outlined">
+                                {videoEnabled ? "videocam" : "videocam_off"}
+                            </span>
                         </button>
+
                         <button
+                            onClick={(e) => { e.stopPropagation(); onToggleAudio?.(); }}
                             className="p-2 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white transition-colors"
-                            title="Toggle Mic"
+                            title={audioEnabled ? "Mute Mic" : "Unmute Mic"}
                         >
-                            <span className="material-symbols-outlined">mic_off</span>
+                            <span className="material-symbols-outlined">
+                                {audioEnabled ? "mic" : "mic_off"}
+                            </span>
                         </button>
+
+
                     </div>
                 </>
             )}

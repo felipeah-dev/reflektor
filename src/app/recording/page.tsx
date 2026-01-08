@@ -1,12 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { CameraPreview } from "@/components/features/media/CameraPreview";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
-export default function RecordingPage() {
+import { CameraPreview } from "@/components/features/media/CameraPreview";
+import { cn } from "@/lib/utils";
+import { Logo } from "@/components/ui/Logo";
+
+
+
+function RecordingContent() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const videoDeviceId = searchParams.get("videoDeviceId") || undefined;
+    const audioDeviceId = searchParams.get("audioDeviceId") || undefined;
     const [seconds, setSeconds] = useState(0);
+
+    const [micEnabled, setMicEnabled] = useState(true);
+    const [cameraEnabled, setCameraEnabled] = useState(true);
+
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -31,16 +43,8 @@ export default function RecordingPage() {
         <div className="bg-background-dark text-white h-screen flex flex-col overflow-hidden font-display selection:bg-primary selection:text-background-dark">
             {/* Header: Minimalist Top Bar */}
             <header className="w-full flex items-center justify-between px-6 py-4 md:px-10 border-b border-white/10 z-10 bg-background-dark/80 backdrop-blur-md sticky top-0">
-                <div className="flex items-center gap-3">
-                    <div className="text-primary">
-                        <span className="material-symbols-outlined text-3xl">
-                            emergency_recording
-                        </span>
-                    </div>
-                    <h2 className="text-lg md:text-xl font-bold tracking-tight text-white">
-                        REFLEKTOR
-                    </h2>
-                </div>
+                <Logo />
+
                 {/* Subtle Context Indicator */}
                 <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10">
                     <span className="material-symbols-outlined text-[18px] text-gray-400">
@@ -57,8 +61,19 @@ export default function RecordingPage() {
                 <div className="relative w-full max-w-5xl aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/10 group">
                     {/* Reuse CameraPreview without standard overlays */}
                     <div className="absolute inset-0">
-                        <CameraPreview showOverlays={false} />
+                        <CameraPreview
+                            showOverlays={false}
+                            audioEnabled={micEnabled}
+                            videoEnabled={cameraEnabled}
+                            videoDeviceId={videoDeviceId}
+                            audioDeviceId={audioDeviceId}
+                            onToggleVideo={() => setCameraEnabled(!cameraEnabled)}
+                            onToggleAudio={() => setMicEnabled(!micEnabled)}
+                        />
+
+
                     </div>
+
 
                     {/* Gradient Overlay for readability */}
                     <div className="absolute inset-x-0 bottom-0 top-1/2 bg-gradient-to-t from-black/80 to-transparent pointer-events-none"></div>
@@ -97,22 +112,31 @@ export default function RecordingPage() {
                     {/* Secondary Toggles */}
                     <div className="flex items-center gap-4 order-2 md:order-1">
                         <button
-                            className="group flex items-center justify-center size-12 rounded-full bg-white/10 hover:bg-white/20 transition-all border border-white/5 text-white"
-                            title="Mute Microphone"
+                            onClick={() => setMicEnabled(!micEnabled)}
+                            className={cn(
+                                "group flex items-center justify-center size-12 rounded-full transition-all border text-white",
+                                micEnabled ? "bg-white/10 hover:bg-white/20 border-white/5" : "bg-red-500/20 border-red-500 text-red-500"
+                            )}
+                            title={micEnabled ? "Mute Microphone" : "Unmute Microphone"}
                         >
                             <span className="material-symbols-outlined text-[24px] group-hover:scale-110 transition-transform">
-                                mic
+                                {micEnabled ? "mic" : "mic_off"}
                             </span>
                         </button>
                         <button
-                            className="group flex items-center justify-center size-12 rounded-full bg-white/10 hover:bg-white/20 transition-all border border-white/5 text-white"
-                            title="Disable Camera"
+                            onClick={() => setCameraEnabled(!cameraEnabled)}
+                            className={cn(
+                                "group flex items-center justify-center size-12 rounded-full transition-all border text-white",
+                                cameraEnabled ? "bg-white/10 hover:bg-white/20 border-white/5" : "bg-red-500/20 border-red-500 text-red-500"
+                            )}
+                            title={cameraEnabled ? "Disable Camera" : "Enable Camera"}
                         >
                             <span className="material-symbols-outlined text-[24px] group-hover:scale-110 transition-transform">
-                                videocam
+                                {cameraEnabled ? "videocam" : "videocam_off"}
                             </span>
                         </button>
                     </div>
+
                     {/* Primary Action */}
                     <div className="order-1 md:order-2 flex-grow md:flex-grow-0">
                         <button
@@ -145,3 +169,12 @@ export default function RecordingPage() {
         </div>
     );
 }
+
+export default function RecordingPage() {
+    return (
+        <Suspense fallback={<div className="bg-background-dark min-h-screen flex items-center justify-center text-white">Loading recording...</div>}>
+            <RecordingContent />
+        </Suspense>
+    );
+}
+
