@@ -9,19 +9,24 @@ export default function ProcessingPage() {
     const [progress, setProgress] = useState(0);
 
     useEffect(() => {
+        if (progress >= 100) {
+            router.push("/results");
+        }
+    }, [progress, router]);
+
+    useEffect(() => {
         // Simulate progress
         const interval = setInterval(() => {
             setProgress((p) => {
                 if (p >= 100) {
                     clearInterval(interval);
-                    router.push("/results");
                     return 100;
                 }
                 return p + 1; // 1% every 50ms = 5 seconds total
             });
         }, 50);
         return () => clearInterval(interval);
-    }, [router]);
+    }, []);
 
     return (
         <div className="bg-background-dark text-white font-display overflow-x-hidden min-h-screen flex flex-col">

@@ -1,14 +1,19 @@
+"use client";
+
 import Link from "next/link";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { CameraPreview } from "@/components/features/media/CameraPreview";
 import { AudioVisualizer } from "@/components/features/media/AudioVisualizer";
 import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-export default function SetupPage() {
+function SetupContent() {
     const searchParams = useSearchParams();
     const scenario = searchParams.get("scenario") || "custom";
     const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+    const [hasMicPermission, setHasMicPermission] = useState<boolean | null>(null);
+
+    const isReady = hasCameraPermission === true && hasMicPermission === true;
 
     return (
         <div className="bg-background-dark min-h-screen flex flex-col font-display text-white">
@@ -45,10 +50,13 @@ export default function SetupPage() {
                         </p>
                     </div>
                     {/* Video Container */}
-                    <CameraPreview onPermissionChange={setHasCameraPermission} />
+                    <CameraPreview
+                        onPermissionChange={setHasCameraPermission}
+                        onMicPermissionChange={setHasMicPermission}
+                    />
                     {/* Device Selectors */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-                        <label className="flex flex-col gap-2">
+                        <label className="flex flex-col gap-2 transition-opacity" style={{ opacity: hasCameraPermission === true ? 1 : 0.6 }}>
                             <span className="text-sm font-medium text-[#9db9a6]">
                                 Camera
                             </span>
@@ -70,7 +78,7 @@ export default function SetupPage() {
                                 </div>
                             </div>
                         </label>
-                        <label className="flex flex-col gap-2">
+                        <label className="flex flex-col gap-2 transition-opacity" style={{ opacity: hasMicPermission === true ? 1 : 0.6 }}>
                             <span className="text-sm font-medium text-[#9db9a6]">
                                 Microphone
                             </span>
@@ -127,18 +135,25 @@ export default function SetupPage() {
                             {/* Item 2: Audio Level */}
                             <div className="flex flex-col gap-2">
                                 <div className="flex items-start gap-3">
-                                    <div className="shrink-0 size-5 rounded-full bg-primary flex items-center justify-center text-background-dark mt-0.5">
+                                    <div className={cn(
+                                        "shrink-0 size-5 rounded-full flex items-center justify-center text-background-dark mt-0.5 transition-colors",
+                                        hasMicPermission === true ? "bg-primary" : "bg-gray-600"
+                                    )}>
                                         <span className="material-symbols-outlined !text-sm font-bold">
-                                            check
+                                            {hasMicPermission === true ? "check" : "close"}
                                         </span>
                                     </div>
                                     <div className="flex-1">
                                         <div className="flex justify-between items-center mb-1">
-                                            <p className="text-sm font-bold">Audio Level</p>
-                                            <span className="text-xs text-primary font-mono">OK</span>
+                                            <p className="text-sm font-bold">
+                                                {hasMicPermission === true ? "Microphone active" : hasMicPermission === false ? "Mic access denied" : "Detecting audio..."}
+                                            </p>
+                                            {hasMicPermission === true && <span className="text-xs text-primary font-mono">OK</span>}
                                         </div>
-                                        {/* Visualizer Bars */}
-                                        <AudioVisualizer />
+                                        {/* Visualizer Bars (Mock) */}
+                                        <div style={{ opacity: hasMicPermission === true ? 1 : 0.3 }}>
+                                            <AudioVisualizer />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -173,27 +188,27 @@ export default function SetupPage() {
                     {/* Action Area */}
                     <div className="flex flex-col gap-3">
                         <Link
-                            href={hasCameraPermission ? `/recording?scenario=${scenario}` : "#"}
+                            href={isReady ? `/recording?scenario=${scenario}` : "#"}
                             className={cn(
                                 "w-full font-display font-bold text-lg h-14 rounded-lg transition-all flex items-center justify-center gap-2 group/btn",
-                                hasCameraPermission
+                                isReady
                                     ? "bg-primary hover:bg-green-400 text-background-dark shadow-[0_0_20px_rgba(19,236,91,0.3)] hover:shadow-[0_0_30px_rgba(19,236,91,0.5)]"
                                     : "bg-gray-700 text-gray-400 cursor-not-allowed opacity-70"
                             )}
-                            onClick={(e) => !hasCameraPermission && e.preventDefault()}
+                            onClick={(e) => !isReady && e.preventDefault()}
                         >
                             <div className={cn(
                                 "size-3 rounded-full animate-pulse",
-                                hasCameraPermission ? "bg-red-600" : "bg-gray-500"
+                                isReady ? "bg-red-600" : "bg-gray-500"
                             )}></div>
                             START RECORDING
                             <span className="material-symbols-outlined transition-transform group-hover/btn:translate-x-1">
                                 arrow_forward
                             </span>
                         </Link>
-                        {hasCameraPermission === false && (
+                        {!isReady && (hasCameraPermission === false || hasMicPermission === false) && (
                             <p className="text-[10px] text-center text-red-400 font-medium">
-                                Please enable camera access to continue
+                                Please enable both camera and mic access to continue
                             </p>
                         )}
                         <p className="text-xs text-center text-[#9db9a6]">
@@ -204,5 +219,13 @@ export default function SetupPage() {
                 </aside>
             </main>
         </div>
+    );
+}
+
+export default function SetupPage() {
+    return (
+        <Suspense fallback={<div className="bg-background-dark min-h-screen flex items-center justify-center text-white">Loading setup...</div>}>
+            <SetupContent />
+        </Suspense>
     );
 }
