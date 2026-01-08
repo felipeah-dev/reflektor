@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Logo } from "@/components/ui/Logo";
+
 import Link from "next/link";
 
 export default function ProcessingPage() {
@@ -33,12 +35,10 @@ export default function ProcessingPage() {
             <div className="w-full border-b border-[#28392e] bg-background-dark/50 backdrop-blur-sm sticky top-0 z-50">
                 <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
                     <header className="flex items-center justify-between h-16">
-                        <Link className="flex items-center gap-3 text-white hover:opacity-80 transition-opacity" href="/">
-                            <div className="size-8 text-primary flex items-center justify-center">
-                                <span className="material-symbols-outlined text-3xl">hexagon</span>
-                            </div>
-                            <h2 className="text-white text-xl font-bold tracking-tight">REFLEKTOR</h2>
+                        <Link className="hover:opacity-80 transition-opacity" href="/">
+                            <Logo textSize="text-xl" />
                         </Link>
+
                     </header>
                 </div>
             </div>

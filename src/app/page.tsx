@@ -1,18 +1,14 @@
 import Link from "next/link";
+import { Logo } from "@/components/ui/Logo";
+
 
 export default function Home() {
   return (
     <div className="layout-container flex h-full grow flex-col">
       <header className="sticky top-0 z-50 w-full border-b border-[#28392e]/50 bg-background-dark/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <span className="material-symbols-outlined" style={{ fontSize: "24px" }}>
-                psychology
-              </span>
-            </div>
-            <h2 className="text-lg font-bold tracking-tight text-white">REFLEKTOR</h2>
-          </div>
+          <Logo />
+
 
           <div className="flex items-center gap-4">
             <Link href="/settings" className="flex size-10 items-center justify-center rounded-full text-[#8fa99a] hover:bg-[#28392e] hover:text-white transition-colors">
@@ -206,7 +202,8 @@ export default function Home() {
       <footer className="mt-auto w-full border-t border-[#28392e] bg-background-dark py-10 text-center">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center justify-center gap-6 md:flex-row md:justify-between">
-            <p className="text-sm text-[#8fa99a]">© 2024 REFLEKTOR AI. All rights reserved.</p>
+            <p className="text-sm text-[#8fa99a]">© 2026 REFLEKTOR AI. All rights reserved.</p>
+
             <div className="flex gap-8">
               <a className="text-sm font-medium text-[#8fa99a] hover:text-primary transition-colors" href="#">
                 Help

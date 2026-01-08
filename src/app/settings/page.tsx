@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Logo } from "@/components/ui/Logo";
+
 
 export default function SettingsPage() {
     const router = useRouter();
@@ -11,18 +13,12 @@ export default function SettingsPage() {
             <header className="sticky top-0 z-50 w-full border-b border-solid border-[#28392e] bg-background-dark/95 backdrop-blur-md px-4 sm:px-10 py-3">
                 <div className="mx-auto max-w-[1440px] flex items-center justify-between whitespace-nowrap">
                     <Link
-                        className="flex items-center gap-4 text-white group hover:opacity-90 transition-opacity"
+                        className="hover:opacity-90 transition-opacity"
                         href="/"
                     >
-                        <div className="size-8 text-primary transition-transform group-hover:scale-105">
-                            <span className="material-symbols-outlined !text-[32px]">
-                                hexagon
-                            </span>
-                        </div>
-                        <h2 className="text-lg font-bold leading-tight tracking-[-0.015em]">
-                            REFLEKTOR
-                        </h2>
+                        <Logo textSize="text-lg" />
                     </Link>
+
                     <div className="flex items-center gap-4 sm:gap-6">
                         <button className="hidden sm:flex items-center gap-2 px-5 py-2 rounded-lg bg-primary hover:bg-[#10c94d] text-[#102216] font-bold text-sm shadow-[0_0_15px_rgba(19,236,91,0.2)] hover:shadow-[0_0_20px_rgba(19,236,91,0.4)] transition-all">
                             <span className="material-symbols-outlined text-[20px]">

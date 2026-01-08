@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ResultsCanvas from "@/components/features/media/ResultsCanvas";
+import { Logo } from "@/components/ui/Logo";
+
+
 
 export default function ResultsPage() {
     const router = useRouter();
@@ -11,16 +14,12 @@ export default function ResultsPage() {
         <div className="bg-background-dark font-display text-white overflow-x-hidden min-h-screen flex flex-col">
             <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-surface-dark px-6 lg:px-10 py-4 bg-background-dark z-20 sticky top-0">
                 <Link
-                    className="flex items-center gap-4 text-white hover:opacity-80 transition-opacity group"
+                    className="hover:opacity-80 transition-opacity"
                     href="/"
                 >
-                    <div className="size-8 text-primary group-hover:scale-110 transition-transform">
-                        <span className="material-symbols-outlined !text-[32px]">api</span>
-                    </div>
-                    <h2 className="text-white text-xl font-bold leading-tight tracking-[-0.015em]">
-                        REFLEKTOR
-                    </h2>
+                    <Logo textSize="text-xl" />
                 </Link>
+
                 <div className="flex items-center gap-6">
                     <button className="hidden md:flex cursor-pointer items-center justify-center rounded-lg h-10 px-5 bg-primary hover:bg-[#0fdc50] active:scale-95 transition-all text-background-dark text-sm font-bold leading-normal tracking-[0.015em] shadow-[0_0_15px_rgba(19,236,91,0.2)]">
                         <span className="material-symbols-outlined mr-2 text-[20px]">
