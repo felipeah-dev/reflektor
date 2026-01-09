@@ -1,22 +1,90 @@
-// Simple singleton store for session data
-// In a real app this would be a Context or a persistence layer (IndexedDB)
-// Using a global variable that persists as long as the page doesn't refresh
+// Simple IndexedDB wrapper for session data
+// Persists the video blob and metadata across page refreshes
 
 type SessionData = {
-    videoBlob: Blob | null;
-    videoUrl: string | null;
+    videoBlob: Blob;
+    videoUrl?: string; // We'll regenerate this on load
     duration: number;
     timestamp: number;
 };
 
-let currentSession: SessionData | null = null;
+const DB_NAME = "ReflektorSessions";
+const STORE_NAME = "sessions";
+const DB_VERSION = 1;
+
+let dbPromise: Promise<IDBDatabase> | null = null;
+
+function getDB(): Promise<IDBDatabase> {
+    if (dbPromise) return dbPromise;
+
+    dbPromise = new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onupgradeneeded = () => {
+            const db = request.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME);
+            }
+        };
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+
+    return dbPromise;
+}
 
 export const sessionStore = {
-    setSession: (data: SessionData) => {
-        currentSession = data;
+    async setSession(data: { videoBlob: Blob; duration: number; timestamp: number }) {
+        const db = await getDB();
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+
+        // We only care about the most recent session for now
+        // Storing with a fixed key 'current'
+        store.put({
+            videoBlob: data.videoBlob,
+            duration: data.duration,
+            timestamp: data.timestamp
+        }, 'current');
+
+        return new Promise<void>((resolve, reject) => {
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
     },
-    getSession: () => currentSession,
-    clearSession: () => {
-        currentSession = null;
+
+    async getSession(): Promise<SessionData | null> {
+        const db = await getDB();
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        const request = store.get('current');
+
+        return new Promise((resolve, reject) => {
+            request.onsuccess = () => {
+                const data = request.result;
+                if (data) {
+                    // Regenerate the Blob URL as it's not persistent
+                    data.videoUrl = URL.createObjectURL(data.videoBlob);
+                    resolve(data);
+                } else {
+                    resolve(null);
+                }
+            };
+            request.onerror = () => reject(request.error);
+        });
+    },
+
+    async clearSession() {
+        const db = await getDB();
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+        store.delete('current');
+
+        return new Promise<void>((resolve, reject) => {
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
     }
 };
+

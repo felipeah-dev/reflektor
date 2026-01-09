@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/Logo";
 import { useMediaRecorder } from "@/hooks/useMediaRecorder";
 import { sessionStore } from "@/lib/sessionStore";
+import { AudioVisualizer } from "@/components/features/media/AudioVisualizer";
+
 
 
 
@@ -45,15 +47,17 @@ function RecordingContent() {
     }, [activeStream, startRecording]);
 
     useEffect(() => {
-        if (status === 'stopped' && recordedBlob) {
-            sessionStore.setSession({
-                videoBlob: recordedBlob,
-                videoUrl: URL.createObjectURL(recordedBlob),
-                duration: seconds,
-                timestamp: Date.now()
-            });
-            router.push("/processing");
-        }
+        const handleRecordingStop = async () => {
+            if (status === 'stopped' && recordedBlob) {
+                await sessionStore.setSession({
+                    videoBlob: recordedBlob,
+                    duration: seconds,
+                    timestamp: Date.now()
+                });
+                router.push("/processing");
+            }
+        };
+        handleRecordingStop();
     }, [status, recordedBlob, router, seconds]);
 
 
@@ -123,14 +127,9 @@ function RecordingContent() {
                             Recording...
                         </span>
                     </div>
-                    {/* Top Right: Audio Waveform Visualization (Simulated) */}
-                    <div className="absolute top-6 right-6 flex items-end gap-1 h-6">
-                        <div className="w-1 bg-primary/80 h-3 rounded-full animate-[pulse_1s_ease-in-out_infinite]"></div>
-                        <div className="w-1 bg-primary h-5 rounded-full animate-[pulse_1.2s_ease-in-out_infinite]"></div>
-                        <div className="w-1 bg-primary/90 h-4 rounded-full animate-[pulse_0.8s_ease-in-out_infinite]"></div>
-                        <div className="w-1 bg-primary/60 h-2 rounded-full animate-[pulse_1.5s_ease-in-out_infinite]"></div>
-                        <div className="w-1 bg-primary h-6 rounded-full animate-[pulse_1.1s_ease-in-out_infinite]"></div>
-                        <div className="w-1 bg-primary/80 h-3 rounded-full animate-[pulse_0.9s_ease-in-out_infinite]"></div>
+                    {/* Top Right: Audio Waveform Visualization */}
+                    <div className="absolute top-6 right-6 flex items-end gap-1 h-8">
+                        <AudioVisualizer stream={activeStream} />
                     </div>
                     {/* Bottom Center: Timer */}
                     <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center">

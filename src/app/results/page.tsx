@@ -25,10 +25,13 @@ export default function ResultsPage() {
 
 
     useEffect(() => {
-        const data = sessionStore.getSession();
-        if (data) {
-            setSession(data);
-        }
+        const loadSession = async () => {
+            const data = await sessionStore.getSession();
+            if (data) {
+                setSession(data);
+            }
+        };
+        loadSession();
     }, []);
 
     const togglePlay = () => {

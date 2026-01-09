@@ -1,67 +1,95 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from 'react';
 
 interface AudioVisualizerProps {
     stream: MediaStream | null;
+    className?: string;
+    barColor?: string;
     isMuted?: boolean;
 }
 
-export function AudioVisualizer({ stream, isMuted = false }: AudioVisualizerProps) {
-    const barsRef = useRef<(HTMLDivElement | null)[]>([]);
-    const animationFrameRef = useRef<number | null>(null);
+export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
+    stream,
+    className = "",
+    barColor = "#13ec5b",
+    isMuted = false
+}) => {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const animationRef = useRef<number>(null);
+    const analyserRef = useRef<AnalyserNode>(null);
+    const audioContextRef = useRef<AudioContext>(null);
 
     useEffect(() => {
-        if (!stream || isMuted) return;
+        if (!stream || !canvasRef.current) return;
 
+        // Initialize Audio Context
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const source = audioContext.createMediaStreamSource(stream);
         const analyser = audioContext.createAnalyser();
-        analyser.fftSize = 64; // Small FFT for simple bars
+        const source = audioContext.createMediaStreamSource(stream);
+
         source.connect(analyser);
+        analyser.fftSize = 64; // Small for a simple bar visualizer
+
+        analyserRef.current = analyser;
+        audioContextRef.current = audioContext;
 
         const bufferLength = analyser.frequencyBinCount;
         const dataArray = new Uint8Array(bufferLength);
 
-        const updateBars = () => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const draw = () => {
+            animationRef.current = requestAnimationFrame(draw);
+
+            if (isMuted) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                return;
+            }
+
             analyser.getByteFrequencyData(dataArray);
 
-            // We have 10 bars in the UI
-            const barCount = 10;
-            for (let i = 0; i < barCount; i++) {
-                const bar = barsRef.current[i];
-                if (bar) {
-                    // Sample the frequency data
-                    const val = dataArray[i % bufferLength];
-                    // Map value to percentage height (30% to 100%)
-                    const height = Math.max(20, (val / 255) * 100);
-                    bar.style.height = `${height}%`;
-                    // Opacity based on volume
-                    bar.style.opacity = `${Math.max(0.3, val / 255)}`;
-                }
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const width = canvas.width;
+            const height = canvas.height;
+            const barWidth = (width / bufferLength) * 2.5;
+            let barHeight;
+            let x = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                barHeight = (dataArray[i] / 255) * height;
+
+                ctx.fillStyle = barColor;
+                // Rounded bars
+                const radius = barWidth / 2;
+                const y = height - barHeight;
+
+                ctx.beginPath();
+                ctx.roundRect(x, y, barWidth - 2, barHeight, radius);
+                ctx.fill();
+
+                x += barWidth + 1;
             }
-            animationFrameRef.current = requestAnimationFrame(updateBars);
         };
 
-        updateBars();
+        draw();
 
         return () => {
-            if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-            audioContext.close();
+            if (animationRef.current) cancelAnimationFrame(animationRef.current);
+            if (audioContextRef.current) audioContextRef.current.close();
         };
-    }, [stream, isMuted]);
+    }, [stream, barColor, isMuted]);
 
     return (
-        <div className="flex items-end justify-between h-8 gap-0.5">
-            {[...Array(10)].map((_, i) => (
-                <div
-                    key={i}
-                    ref={(el) => { barsRef.current[i] = el; }}
-                    className="w-1 bg-primary rounded-full transition-[height,opacity] duration-75"
-                    style={{ height: '20%' }}
-                ></div>
-            ))}
-        </div>
+        <canvas
+            ref={canvasRef}
+            className={className}
+            width={120}
+            height={32}
+        />
     );
-}
-
+};
