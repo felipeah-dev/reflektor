@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -181,22 +181,29 @@ export default function ResultsPage() {
                         <div ref={videoContainerRef} className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-surface-dark group shadow-2xl">
                             {/* Dynamic Canvas Layer or Real Video */}
                             {session?.videoUrl ? (
-                                <video
-                                    ref={videoRef}
-                                    src={session.videoUrl}
-                                    className="w-full h-full object-contain"
-                                    onPlay={() => setIsPlaying(true)}
-                                    onPause={() => setIsPlaying(false)}
-                                    onTimeUpdate={handleTimeUpdate}
-                                    onLoadedMetadata={handleLoadedMetadata}
-                                    muted={isMuted}
-                                    onClick={togglePlay}
-                                />
-
-
+                                <>
+                                    <video
+                                        ref={videoRef}
+                                        src={session.videoUrl}
+                                        className="w-full h-full object-contain"
+                                        onPlay={() => setIsPlaying(true)}
+                                        onPause={() => setIsPlaying(false)}
+                                        onTimeUpdate={handleTimeUpdate}
+                                        onLoadedMetadata={handleLoadedMetadata}
+                                        muted={isMuted}
+                                        onClick={togglePlay}
+                                    />
+                                    {/* Overlay Layer */}
+                                    <div className="absolute inset-0 pointer-events-none z-20">
+                                        <ResultsCanvas
+                                            analysisData={session.analysis?.events || []}
+                                            currentTime={currentTime}
+                                        />
+                                    </div>
+                                </>
                             ) : (
                                 <div className="absolute inset-0 z-0">
-                                    <ResultsCanvas imageSrc="https://lh3.googleusercontent.com/aida-public/AB6AXuBq9gvOnrKa_ap4I-A_9QP9tDU-eo6CJJDNbz7UF5pV9Qq6by2DeSK1ipYY3KkG7D0Rb02Thpej4EXaVZ_Yrl2BRLZPH1PFmqE4bhvVGehzYB-RvvusWPuerKPZjWTRVSkQxWzFNBVRPW2zvh9XSpCtnHUizK83UJjdRSlL3DleAlMmbCu1DnzV5u4yi-_BkKcm7RGNcErH5d1nxAzNI2PAqWVx-jPK7ekczXo8lpAUb7kWvzyN4m61x4WC8GqNNl_FYtOFZBdYstz8" />
+                                    <ResultsCanvas currentTime={0} />
                                 </div>
                             )}
 
@@ -303,7 +310,7 @@ export default function ResultsPage() {
                                     Pace
                                 </div>
                                 <div className="text-2xl font-bold text-white">
-                                    130 <span className="text-sm font-normal text-muted">wpm</span>
+                                    {session?.analysis?.summary?.pace || 0} <span className="text-sm font-normal text-muted">wpm</span>
                                 </div>
                                 <div className="text-xs text-primary mt-1">Optimal Range</div>
                             </div>
@@ -314,8 +321,8 @@ export default function ResultsPage() {
                                     </span>{" "}
                                     Sentiment
                                 </div>
-                                <div className="text-2xl font-bold text-white">Positive</div>
-                                <div className="text-xs text-primary mt-1">High Confidence</div>
+                                <div className="text-2xl font-bold text-white">{session?.analysis?.summary?.sentiment || 'Analyzing...'}</div>
+                                <div className="text-xs text-primary mt-1">AI Context</div>
                             </div>
                             <div className="bg-surface-dark border border-surface-hover rounded-lg p-4 flex flex-col items-start">
                                 <div className="flex items-center gap-2 mb-1 text-muted text-xs uppercase tracking-wider font-bold">
@@ -324,8 +331,8 @@ export default function ResultsPage() {
                                     </span>{" "}
                                     Eye Contact
                                 </div>
-                                <div className="text-2xl font-bold text-yellow-500">68%</div>
-                                <div className="text-xs text-muted mt-1">Needs Improvement</div>
+                                <div className="text-2xl font-bold text-yellow-500">{session?.analysis?.summary?.eyeContact || 0}%</div>
+                                <div className="text-xs text-muted mt-1">AI Gaze Tracking</div>
                             </div>
                             <div className="bg-surface-dark border border-surface-hover rounded-lg p-4 flex flex-col items-start">
                                 <div className="flex items-center gap-2 mb-1 text-muted text-xs uppercase tracking-wider font-bold">
@@ -334,8 +341,8 @@ export default function ResultsPage() {
                                     </span>{" "}
                                     Clarity
                                 </div>
-                                <div className="text-2xl font-bold text-white">94%</div>
-                                <div className="text-xs text-primary mt-1">Excellent</div>
+                                <div className="text-2xl font-bold text-white">{session?.analysis?.summary?.clarity || 0}%</div>
+                                <div className="text-xs text-primary mt-1">Vocal Quality</div>
                             </div>
                         </div>
                     </div>
@@ -351,12 +358,11 @@ export default function ResultsPage() {
                                     Overall Performance
                                 </h3>
                                 <div className="flex items-baseline gap-2">
-                                    <span className="text-6xl font-bold text-primary">8.5</span>
+                                    <span className="text-6xl font-bold text-primary">{session?.analysis?.summary?.score || 0}</span>
                                     <span className="text-xl text-muted">/ 10</span>
                                 </div>
                                 <p className="text-white mt-2 leading-relaxed text-sm">
-                                    Great presentation! Your pace and clarity were excellent. Focus
-                                    on maintaining eye contact during transitions.
+                                    {session?.analysis?.summary?.overallFeedback || "Analyzing your session with Gemini 3..."}
                                 </p>
                             </div>
                         </div>
@@ -420,44 +426,46 @@ export default function ResultsPage() {
                                 <h3 className="text-white text-sm font-bold">Feedback Log</h3>
                             </div>
                             <div className="overflow-y-auto p-4 flex-1 scrollbar-hide">
-                                <div className="grid grid-cols-[32px_1fr] gap-x-3">
-                                    {/* Item 1 */}
-                                    <div className="flex flex-col items-center gap-1 pt-1">
-                                        <span className="material-symbols-outlined text-primary text-[20px]">check_circle</span>
-                                        <div className="w-[1px] bg-surface-hover h-full min-h-[40px] grow"></div>
-                                    </div>
-                                    <div className="flex flex-col pb-6 cursor-pointer group">
-                                        <div className="flex items-center justify-between mb-1">
-                                            <span className="text-primary text-xs font-bold">0:05</span>
+                                <div className="grid grid-cols-[32px_1fr] gap-y-3">
+                                    {(session?.analysis?.events || []).map((event: any, idx: number) => {
+                                        const isWarning = event.type === 'filler' || event.type === 'spatial_warning';
+                                        return (
+                                            <React.Fragment key={idx}>
+                                                <div className="flex flex-col items-center gap-1 pt-1">
+                                                    <span className={cn(
+                                                        "material-symbols-outlined text-[20px]",
+                                                        isWarning ? "text-yellow-500" : "text-primary"
+                                                    )}>
+                                                        {isWarning ? 'error' : 'check_circle'}
+                                                    </span>
+                                                    {idx < (session.analysis.events.length - 1) && (
+                                                        <div className="w-[1px] bg-surface-hover h-full min-h-[40px] grow"></div>
+                                                    )}
+                                                </div>
+                                                <div className="flex flex-col pb-6 cursor-pointer group" onClick={() => {
+                                                    if (videoRef.current) videoRef.current.currentTime = event.start;
+                                                }}>
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <span className={cn("text-xs font-bold", isWarning ? "text-yellow-500" : "text-primary")}>
+                                                            {formatTimeFull(event.start)}
+                                                        </span>
+                                                        {isWarning && (
+                                                            <span className="text-[10px] bg-yellow-500/20 text-yellow-500 px-1.5 rounded uppercase font-bold">Review</span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-white text-sm font-medium group-hover:text-primary transition-colors">
+                                                        {event.type.replace('_', ' ').toUpperCase()}
+                                                    </p>
+                                                    <p className="text-muted text-xs mt-0.5">{event.description}</p>
+                                                </div>
+                                            </React.Fragment>
+                                        );
+                                    })}
+                                    {(!session?.analysis?.events || session.analysis.events.length === 0) && (
+                                        <div className="col-span-2 text-center py-10 text-muted italic">
+                                            No detailed events found.
                                         </div>
-                                        <p className="text-white text-sm font-medium group-hover:text-primary transition-colors">Good Eye Contact</p>
-                                        <p className="text-muted text-xs mt-0.5">Started with confident gaze.</p>
-                                    </div>
-                                    {/* Item 2 */}
-                                    <div className="flex flex-col items-center gap-1">
-                                        <span className="material-symbols-outlined text-yellow-500 text-[20px]">error</span>
-                                        <div className="w-[1px] bg-surface-hover h-full min-h-[40px] grow"></div>
-                                    </div>
-                                    <div className="flex flex-col pb-6 cursor-pointer group bg-surface-hover/10 -mx-2 px-2 py-2 rounded">
-                                        <div className="flex items-center justify-between mb-1">
-                                            <span className="text-yellow-500 text-xs font-bold">0:45</span>
-                                            <span className="text-[10px] bg-yellow-500/20 text-yellow-500 px-1.5 rounded uppercase font-bold">Review</span>
-                                        </div>
-                                        <p className="text-white text-sm font-medium group-hover:text-yellow-500 transition-colors">Filler Word</p>
-                                        <p className="text-muted text-xs mt-0.5">Used &quot;Uhm&quot; during pause.</p>
-                                    </div>
-                                    {/* Item 3 */}
-                                    <div className="flex flex-col items-center gap-1">
-                                        <span className="material-symbols-outlined text-yellow-500 text-[20px]">pan_tool</span>
-                                        <div className="w-[1px] bg-surface-hover h-full min-h-[40px] grow"></div>
-                                    </div>
-                                    <div className="flex flex-col pb-6 cursor-pointer group">
-                                        <div className="flex items-center justify-between mb-1">
-                                            <span className="text-yellow-500 text-xs font-bold">1:20</span>
-                                        </div>
-                                        <p className="text-white text-sm font-medium group-hover:text-yellow-500 transition-colors">Repetitive Gesture</p>
-                                        <p className="text-muted text-xs mt-0.5">Hand movement is distracting.</p>
-                                    </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

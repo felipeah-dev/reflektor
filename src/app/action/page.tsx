@@ -1,12 +1,23 @@
 "use client";
 
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/components/ui/Logo";
+import { sessionStore } from "@/lib/sessionStore";
 
 
 export default function ActionPage() {
     const router = useRouter();
+    const [session, setSession] = useState<any>(null);
+
+    useEffect(() => {
+        const loadSession = async () => {
+            const data = await sessionStore.getSession();
+            if (data) setSession(data);
+        };
+        loadSession();
+    }, []);
 
     return (
         <div className="bg-background-dark font-display text-white min-h-screen flex flex-col overflow-x-hidden selection:bg-primary selection:text-background-dark">
@@ -67,28 +78,28 @@ export default function ActionPage() {
                                     <span className="material-symbols-outlined text-primary">
                                         psychology
                                     </span>
-                                    <span className="text-white font-medium">Focus Score</span>
+                                    <span className="text-white font-medium">Global Score</span>
                                 </div>
                                 <div className="flex items-baseline gap-2">
                                     <span className="text-3xl font-bold text-white">
-                                        8<span className="text-muted text-xl font-normal">/10</span>
+                                        {session?.analysis?.summary?.score || 0}<span className="text-muted text-xl font-normal">/10</span>
                                     </span>
                                 </div>
                             </div>
                             <div className="flex items-center justify-between">
                                 <div className="flex flex-col">
                                     <span className="text-muted text-xs uppercase tracking-wider font-bold mb-1">
-                                        Key Improvements
+                                        Key Metrics
                                     </span>
                                     <span className="text-white text-sm">
-                                        Better diction clarity
+                                        {session?.analysis?.summary?.eyeContact}% Eye Contact
                                     </span>
                                 </div>
                                 <div className="bg-[#0bda43]/10 px-3 py-1.5 rounded-lg border border-[#0bda43]/20 flex items-center gap-1.5">
                                     <span className="material-symbols-outlined text-[#0bda43] text-sm">
                                         trending_up
                                     </span>
-                                    <span className="text-[#0bda43] text-sm font-bold">+5%</span>
+                                    <span className="text-[#0bda43] text-sm font-bold">{session?.analysis?.summary?.clarity}% Clarity</span>
                                 </div>
                             </div>
                         </div>
@@ -99,9 +110,9 @@ export default function ActionPage() {
                         </span>
                         <p className="text-[#cce8d5] text-sm font-normal leading-relaxed">
                             <span className="text-primary font-bold block mb-0.5">
-                                AI Tip:
+                                AI Coaching Tip:
                             </span>
-                            Try speaking 10% slower in the introduction to better establish the context before speeding up.
+                            {session?.analysis?.summary?.overallFeedback || "Focus on consistency during your next practice."}
                         </p>
                     </div>
                     <div className="flex flex-col gap-3 pt-2">

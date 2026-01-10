@@ -3,32 +3,70 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/components/ui/Logo";
+import { sessionStore } from "@/lib/sessionStore";
+import { analyzeVideo } from "@/lib/gemini";
 
 import Link from "next/link";
 
 export default function ProcessingPage() {
     const router = useRouter();
     const [progress, setProgress] = useState(0);
+    const [statusMsg, setStatusMsg] = useState("We are analyzing your multimodal data with AI. Please do not close this window.");
+    const [isAnalysisComplete, setIsAnalysisComplete] = useState(false);
 
     useEffect(() => {
-        if (progress >= 100) {
-            router.push("/results");
+        const runAnalysis = async () => {
+            try {
+                const session = await sessionStore.getSession();
+                if (!session || !session.videoBlob) {
+                    router.push("/setup");
+                    return;
+                }
+
+                const analysisResults = await analyzeVideo(session.videoBlob, setStatusMsg);
+
+                // Save analysis results to the session store
+                await sessionStore.setSession({
+                    ...session,
+                    analysis: analysisResults
+                });
+
+                setProgress(100);
+                setIsAnalysisComplete(true);
+            } catch (error) {
+                console.error("Analysis failed:", error);
+                setStatusMsg("Analysis failed. Please try again.");
+                // Error handling: maybe allow retry or redirect back
+            }
+        };
+
+        runAnalysis();
+    }, [router]);
+
+    useEffect(() => {
+        if (isAnalysisComplete) {
+            const timeout = setTimeout(() => {
+                router.push("/results");
+            }, 1000); // Small delay to let user see 100%
+            return () => clearTimeout(timeout);
         }
-    }, [progress, router]);
+    }, [isAnalysisComplete, router]);
 
     useEffect(() => {
-        // Simulate progress
+        if (isAnalysisComplete) return;
+
+        // Simulate progress for UI while waiting for real results
         const interval = setInterval(() => {
             setProgress((p) => {
-                if (p >= 100) {
+                if (p >= 95) {
                     clearInterval(interval);
-                    return 100;
+                    return 95; // Wait at 95 until real analysis is done
                 }
-                return p + 1; // 1% every 50ms = 5 seconds total
+                return p + 1;
             });
-        }, 50);
+        }, 150); // Slower fake progress to match real analysis time
         return () => clearInterval(interval);
-    }, []);
+    }, [isAnalysisComplete]);
 
     return (
         <div className="bg-background-dark text-white font-display overflow-x-hidden min-h-screen flex flex-col">
@@ -51,7 +89,7 @@ export default function ProcessingPage() {
                             Processing your Session
                         </h1>
                         <p className="text-[#9db9a6] text-lg font-light">
-                            We are analyzing your multimodal data with AI. Please do not close this window.
+                            {statusMsg}
                         </p>
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mt-4">

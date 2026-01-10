@@ -6,6 +6,7 @@ type SessionData = {
     videoUrl?: string; // We'll regenerate this on load
     duration: number;
     timestamp: number;
+    analysis?: any; // Store Gemini analysis results (summary + events)
 };
 
 const DB_NAME = "ReflektorSessions";
@@ -35,7 +36,7 @@ function getDB(): Promise<IDBDatabase> {
 }
 
 export const sessionStore = {
-    async setSession(data: { videoBlob: Blob; duration: number; timestamp: number }) {
+    async setSession(data: { videoBlob: Blob; duration: number; timestamp: number; analysis?: any }) {
         const db = await getDB();
         const tx = db.transaction(STORE_NAME, "readwrite");
         const store = tx.objectStore(STORE_NAME);
@@ -45,7 +46,8 @@ export const sessionStore = {
         store.put({
             videoBlob: data.videoBlob,
             duration: data.duration,
-            timestamp: data.timestamp
+            timestamp: data.timestamp,
+            analysis: (data as any).analysis || []
         }, 'current');
 
         return new Promise<void>((resolve, reject) => {
