@@ -9,6 +9,24 @@ export default function Home() {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Logo />
 
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "SoftwareApplication",
+                "name": "Reflektor AI",
+                "operatingSystem": "Web",
+                "applicationCategory": "EducationalApplication",
+                "description": "Advanced AI Coaching for Public Speaking and Communication training.",
+                "offers": {
+                  "@type": "Offer",
+                  "price": "0",
+                  "priceCurrency": "USD"
+                }
+              })
+            }}
+          />
 
           <div className="flex items-center gap-4">
             <Link href="/settings" className="flex size-10 items-center justify-center rounded-full text-[#8fa99a] hover:bg-[#28392e] hover:text-white transition-colors">
@@ -44,6 +62,7 @@ export default function Home() {
             {/* CARD 1 */}
             <Link
               href="/setup?scenario=sales"
+              aria-label="Practice Sales Presentation with AI Coach"
               className={[
                 "group relative flex flex-col overflow-hidden rounded-xl",
                 "border border-white/5",
@@ -91,6 +110,7 @@ export default function Home() {
             {/* CARD 2 */}
             <Link
               href="/setup?scenario=pitch"
+              aria-label="Practice Startup Pitch with AI Coach"
               className={[
                 "group relative flex flex-col overflow-hidden rounded-xl",
                 "border border-white/5",
@@ -138,6 +158,7 @@ export default function Home() {
             {/* CARD 3 */}
             <Link
               href="/setup?scenario=speaking"
+              aria-label="Practice Public Speaking with AI Coach"
               className={[
                 "group relative flex flex-col overflow-hidden rounded-xl",
                 "border border-white/5",

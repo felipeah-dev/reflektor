@@ -2,9 +2,37 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "REFLEKTOR",
-  description: "Advanced AI Coaching for Public Speaking",
-  manifest: "/manifest.json",
+  title: "REFLEKTOR AI | Advanced Public Speaking Coach",
+  description: "Master your communication with AI-powered feedback. Analyze gestures, eye contact, and filler words in real-time.",
+  keywords: ["public speaking", "AI coach", "soft skills", "communication training", "speech analysis"],
+  authors: [{ name: "REFLEKTOR Team" }],
+  creator: "REFLEKTOR AI",
+  metadataBase: new URL("https://reflektor.ai"), // Placeholder URL for canonicals
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "REFLEKTOR AI | Professional Public Speaking Coach",
+    description: "Analyze your presentation and master your communication skills with real-time AI feedback.",
+    url: "https://reflektor.ai",
+    siteName: "Reflektor AI",
+    images: [
+      {
+        url: "/og-image.png", // Should be created or provided
+        width: 1200,
+        height: 630,
+        alt: "Reflektor AI Dashboard Preview",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "REFLEKTOR AI | Public Speaking Coach",
+    description: "Master your communication with real-time AI feedback.",
+    images: ["/og-image.png"],
+  },
 };
 
 export default function RootLayout({
