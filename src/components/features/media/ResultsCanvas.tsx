@@ -20,6 +20,13 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
     return adjustedTime >= event.start && adjustedTime <= event.end;
   });
 
+  const getEventCount = (event: any) => {
+    // Count how many events of the same type occurred before or at the same time as this one
+    return analysisData
+      .filter(e => e.type === event.type && e.start <= event.start)
+      .length;
+  };
+
   return (
     <div className="relative w-full h-full rounded-xl overflow-hidden">
       {activeEvents.map((event, index) => {
@@ -34,6 +41,7 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
         const height = (ymax - ymin) / 10;
 
         const isError = event.type === 'filler' || event.type === 'distraction' || event.type === 'no_eye_contact' || event.type === 'spatial_warning';
+        const count = getEventCount(event);
 
         return (
           <div
@@ -58,13 +66,14 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
                 isError ? "bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,1)]" : "bg-primary shadow-[0_0_8px_rgba(19,236,91,1)]"
               )}></span>
               <span className="text-white text-[10px] font-bold uppercase tracking-widest feedback-shadow">
-                {event.description}
+                {event.description} {event.type === 'filler' && `(#${count})`}
               </span>
             </div>
           </div>
         );
       })}
     </div>
+
   );
 };
 
