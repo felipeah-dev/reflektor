@@ -22,6 +22,7 @@ export default function ResultsPage() {
     const [videoDuration, setVideoDuration] = useState(0);
     const [isMuted, setIsMuted] = useState(false);
     const videoContainerRef = useRef<HTMLDivElement>(null);
+    const requestRef = useRef<number | null>(null);
 
 
     useEffect(() => {
@@ -32,20 +33,34 @@ export default function ResultsPage() {
             }
         };
         loadSession();
+        return () => {
+            if (requestRef.current) cancelAnimationFrame(requestRef.current);
+        };
     }, []);
+
+
+    const updateProgress = () => {
+        if (videoRef.current) {
+            setCurrentTime(videoRef.current.currentTime);
+            requestRef.current = requestAnimationFrame(updateProgress);
+        }
+    };
 
     const togglePlay = () => {
         if (videoRef.current) {
             if (isPlaying) {
                 videoRef.current.pause();
+                if (requestRef.current) cancelAnimationFrame(requestRef.current);
             } else {
                 videoRef.current.play();
+                requestRef.current = requestAnimationFrame(updateProgress);
             }
         }
     };
 
     const handleTimeUpdate = () => {
-        if (videoRef.current) {
+        // Fallback or for non-playing states
+        if (videoRef.current && !isPlaying) {
             setCurrentTime(videoRef.current.currentTime);
         }
     };
@@ -71,6 +86,7 @@ export default function ResultsPage() {
 
         }
     };
+
 
 
     const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {

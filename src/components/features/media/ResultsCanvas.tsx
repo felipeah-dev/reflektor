@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
-import { Stage, Layer, Rect, Text, Group } from 'react-konva';
+import { cn } from "@/lib/utils";
 
 interface ResultsCanvasProps {
   analysisData?: any[];
@@ -9,91 +9,64 @@ interface ResultsCanvasProps {
 }
 
 const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], currentTime }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  // Use a small offset for synchronization if needed. 
+  // Gemini detection usually has a slight latency compared to the video frame.
+  // We'll use 0.1s for now, but this can be tuned.
+  const syncOffset = 0.1;
+  const adjustedTime = currentTime + syncOffset;
 
-  useEffect(() => {
-    const updateDimensions = () => {
-      if (containerRef.current) {
-        setDimensions({
-          width: containerRef.current.offsetWidth,
-          height: containerRef.current.offsetHeight,
-        });
-      }
-    };
-
-    updateDimensions();
-    window.addEventListener('resize', updateDimensions);
-
-    return () => window.removeEventListener('resize', updateDimensions);
-  }, []);
-
-  // Filter events that should be active at the current time
+  // Filter events that should be active at the current adjusted time
   const activeEvents = analysisData.filter(event => {
-    return currentTime >= event.start && currentTime <= event.end;
+    return adjustedTime >= event.start && adjustedTime <= event.end;
   });
 
-  const transformBox = (box: number[]) => {
-    if (!box || box.length !== 4) return null;
-    // Gemini: [y_min, x_min, y_max, x_max] (0-1000)
-    const [ymin, xmin, ymax, xmax] = box;
-    return {
-      x: (xmin / 1000) * dimensions.width,
-      y: (ymin / 1000) * dimensions.height,
-      width: ((xmax - xmin) / 1000) * dimensions.width,
-      height: ((ymax - ymin) / 1000) * dimensions.height,
-    };
-  };
-
   return (
-    <div className="w-full h-full rounded-xl overflow-hidden" ref={containerRef}>
-      <Stage width={dimensions.width} height={dimensions.height}>
-        <Layer>
-          {activeEvents.map((event, index) => {
-            const box = transformBox(event.box_2d);
-            if (!box) return null;
+    <div className="relative w-full h-full rounded-xl overflow-hidden">
+      {activeEvents.map((event, index) => {
+        if (!event.box_2d || event.box_2d.length !== 4) return null;
 
-            const isError = event.type === 'filler' || event.type === 'distraction' || event.type === 'no_eye_contact';
-            const color = isError ? "#eab308" : "#13ec5b";
+        // Gemini: [y_min, x_min, y_max, x_max] (0-1000)
+        const [ymin, xmin, ymax, xmax] = event.box_2d;
 
-            return (
-              <Group key={index}>
-                <Rect
-                  x={box.x}
-                  y={box.y}
-                  width={box.width}
-                  height={box.height}
-                  stroke={color}
-                  strokeWidth={2}
-                  shadowColor={color}
-                  shadowBlur={10}
-                  shadowOpacity={0.3}
-                  cornerRadius={4}
-                  dash={isError ? [5, 5] : []}
-                />
-                {/* Label */}
-                <Group x={box.x} y={box.y > 30 ? box.y - 25 : box.y + box.height + 5}>
-                  <Rect
-                    width={event.description.length * 7 + 15}
-                    height={22}
-                    fill={color}
-                    cornerRadius={2}
-                  />
-                  <Text
-                    text={event.description.toUpperCase()}
-                    fontSize={10}
-                    fontStyle="bold"
-                    fill="black"
-                    padding={6}
-                  />
-                </Group>
-              </Group>
-            );
-          })}
-        </Layer>
-      </Stage>
+        const top = ymin / 10; // Convert 0-1000 to 0-100%
+        const left = xmin / 10;
+        const width = (xmax - xmin) / 10;
+        const height = (ymax - ymin) / 10;
+
+        const isError = event.type === 'filler' || event.type === 'distraction' || event.type === 'no_eye_contact' || event.type === 'spatial_warning';
+
+        return (
+          <div
+            key={`${index}-${event.start}`}
+            className={cn(
+              "absolute border-2 rounded-3xl pointer-events-none transition-all duration-300",
+              isError
+                ? "border-yellow-500/40 animate-soft-pulse-yellow"
+                : "border-primary/60 animate-soft-pulse"
+            )}
+            style={{
+              top: `${top}%`,
+              left: `${left}%`,
+              width: `${width}%`,
+              height: `${height}%`,
+            }}
+          >
+            {/* Floating Feedback Pill */}
+            <div className="absolute -top-12 left-1/2 -translate-x-1/2 glass-pill flex items-center gap-2 whitespace-nowrap z-30">
+              <span className={cn(
+                "size-2 rounded-full animate-pulse",
+                isError ? "bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,1)]" : "bg-primary shadow-[0_0_8px_rgba(19,236,91,1)]"
+              )}></span>
+              <span className="text-white text-[10px] font-bold uppercase tracking-widest feedback-shadow">
+                {event.description}
+              </span>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 };
 
 export default ResultsCanvas;
+
