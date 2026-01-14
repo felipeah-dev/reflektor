@@ -40,7 +40,12 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
         const width = (xmax - xmin) / 10;
         const height = (ymax - ymin) / 10;
 
-        const isError = event.type === 'filler' || event.type === 'distraction' || event.type === 'no_eye_contact' || event.type === 'spatial_warning';
+        const isError = event.type === 'filler' ||
+          event.type === 'spatial_warning' ||
+          event.type === 'pace_issue' ||
+          event.severity === 'high' ||
+          event.severity === 'medium';
+
         const count = getEventCount(event);
 
         return (

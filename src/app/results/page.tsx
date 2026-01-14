@@ -23,6 +23,8 @@ export default function ResultsPage() {
     const [isMuted, setIsMuted] = useState(false);
     const videoContainerRef = useRef<HTMLDivElement>(null);
     const requestRef = useRef<number | null>(null);
+    const [isExporting, setIsExporting] = useState(false);
+    const [exportProgress, setExportProgress] = useState(0);
 
 
     useEffect(() => {
@@ -37,6 +39,171 @@ export default function ResultsPage() {
             if (requestRef.current) cancelAnimationFrame(requestRef.current);
         };
     }, []);
+
+    const exportWithAnnotations = async () => {
+        if (!videoRef.current || !session) return;
+
+        setIsExporting(true);
+        setExportProgress(0);
+
+        const video = videoRef.current;
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        // Set high res for export
+        canvas.width = video.videoWidth || 1280;
+        canvas.height = video.videoHeight || 720;
+
+        const stream = canvas.captureStream(30); // 30 FPS
+
+        // Add Audio (Note: Audio will also be 4x faster during recording, but synced)
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const dest = audioContext.createMediaStreamDestination();
+        const source = audioContext.createMediaElementSource(video);
+        source.connect(dest);
+
+        // Don't connect to audioContext.destination to avoid hearing the 4x audio
+
+        const combinedStream = new MediaStream([
+            ...stream.getVideoTracks(),
+            ...dest.stream.getAudioTracks()
+        ]);
+
+        const recorder = new MediaRecorder(combinedStream, {
+            mimeType: 'video/webm;codecs=vp9',
+            videoBitsPerSecond: 8000000 // High quality
+        });
+
+        const chunks: Blob[] = [];
+
+        recorder.ondataavailable = (e) => chunks.push(e.data);
+        recorder.onstop = () => {
+            const blob = new Blob(chunks, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `reflektor-session-feedback-${Date.now()}.webm`;
+            a.click();
+            setIsExporting(false);
+            setExportProgress(0);
+            video.pause();
+            video.currentTime = 0;
+            video.muted = isMuted; // Restore original
+        };
+
+        const drawFrame = () => {
+            if (video.paused || video.ended) return;
+
+            // 1. Draw Video
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // 2. Draw Annotations (Pixel-Perfect UI Clone)
+            const currentTime = video.currentTime;
+            const events = session.analysis?.events || [];
+            const activeEvents = events.filter((e: any) => currentTime >= e.start && currentTime <= e.end);
+
+            activeEvents.forEach((event: any) => {
+                if (!event.box_2d) return;
+                const [ymin, xmin, ymax, xmax] = event.box_2d;
+                const x = (xmin / 1000) * canvas.width;
+                const y = (ymin / 1000) * canvas.height;
+                const w = ((xmax - xmin) / 1000) * canvas.width;
+                const h = ((ymax - ymin) / 1000) * canvas.height;
+
+                const isError = event.type === 'filler' ||
+                    event.type === 'spatial_warning' ||
+                    event.type === 'pace_issue' ||
+                    event.severity === 'high' ||
+                    event.severity === 'medium';
+                const color = isError ? "#eab308" : "#13ec5b";
+
+                // Get count for fillers
+                const count = events.filter((e: any) => e.type === event.type && e.start <= event.start).length;
+
+                // --- Draw Bounding Box (rounded-3xl style) ---
+                ctx.beginPath();
+                const radius = 30; // Matches rounded-3xl
+                ctx.moveTo(x + radius, y);
+                ctx.lineTo(x + w - radius, y);
+                ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+                ctx.lineTo(x + w, y + h - radius);
+                ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+                ctx.lineTo(x + radius, y + h);
+                ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+                ctx.lineTo(x, y + radius);
+                ctx.quadraticCurveTo(x, y, x + radius, y);
+                ctx.closePath();
+
+                ctx.strokeStyle = `${color}66`; // 40% opacity
+                ctx.lineWidth = 4;
+                ctx.stroke();
+
+                // --- Draw Glass Pill Label ---
+                const labelText = `${event.description}${event.type === 'filler' ? ` (#${count})` : ''}`.toUpperCase();
+                ctx.font = "bold 16px 'Space Grotesk', sans-serif";
+                const textWidth = ctx.measureText(labelText).width;
+                const pillPadding = 30;
+                const pillWidth = textWidth + pillPadding + 40; // Extra for dot
+                const pillHeight = 44;
+                const pillX = x + (w / 2) - (pillWidth / 2);
+                const pillY = y - 60;
+
+                // Pill background (Glass effect)
+                ctx.beginPath();
+                const pr = 22; // pill radius
+                ctx.moveTo(pillX + pr, pillY);
+                ctx.lineTo(pillX + pillWidth - pr, pillY);
+                ctx.quadraticCurveTo(pillX + pillWidth, pillY, pillX + pillWidth, pillY + pr);
+                ctx.lineTo(pillX + pillWidth, pillY + pillHeight - pr);
+                ctx.quadraticCurveTo(pillX + pillWidth, pillY + pillHeight, pillX + pillWidth - pr, pillY + pillHeight);
+                ctx.lineTo(pillX + pr, pillY + pillHeight);
+                ctx.quadraticCurveTo(pillX, pillY + pillHeight, pillX, pillY + pillHeight - pr);
+                ctx.lineTo(pillX, pillY + pr);
+                ctx.quadraticCurveTo(pillX, pillY, pillX + pr, pillY);
+                ctx.closePath();
+
+                ctx.fillStyle = "rgba(16, 34, 22, 0.85)"; // Matches background-dark with transparency
+                ctx.fill();
+                ctx.strokeStyle = "rgba(28, 46, 34, 0.9)"; // surface-dark
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Pulsing-style Dot
+                ctx.beginPath();
+                ctx.arc(pillX + 20, pillY + (pillHeight / 2), 5, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = color;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                // Text
+                ctx.fillStyle = "#ffffff";
+                ctx.letterSpacing = "2px";
+                ctx.fillText(labelText, pillX + 35, pillY + (pillHeight / 2) + 6);
+                ctx.letterSpacing = "0px"; // Reset
+            });
+
+            setExportProgress((video.currentTime / video.duration) * 100);
+            if (!video.ended) requestAnimationFrame(drawFrame);
+        };
+
+        // Standard Speed Mode: 1x speed export for maximal fidelity
+        video.currentTime = 0;
+        video.playbackRate = 1.0;
+        video.muted = false; // Keep audio audible if desired, or set to true if user prefers quiet export
+
+        video.play();
+        recorder.start();
+        drawFrame();
+
+        video.onended = () => {
+            recorder.stop();
+        };
+    };
+
+
 
 
     const updateProgress = () => {
@@ -444,7 +611,11 @@ export default function ResultsPage() {
                             <div className="overflow-y-auto p-4 flex-1 scrollbar-hide">
                                 <div className="grid grid-cols-[32px_1fr] gap-y-3">
                                     {(session?.analysis?.events || []).map((event: any, idx: number) => {
-                                        const isWarning = event.type === 'filler' || event.type === 'spatial_warning';
+                                        const isWarning = event.type === 'filler' ||
+                                            event.type === 'spatial_warning' ||
+                                            event.type === 'pace_issue' ||
+                                            event.severity === 'high' ||
+                                            event.severity === 'medium';
                                         return (
                                             <React.Fragment key={idx}>
                                                 <div className="flex flex-col items-center gap-1 pt-1">
@@ -497,17 +668,28 @@ export default function ResultsPage() {
                             <span>Share</span>
                         </button>
                         <button
-                            onClick={() => {
-                                const a = document.createElement('a');
-                                a.href = session?.videoUrl;
-                                a.download = `reflektor-practice-${Date.now()}.webm`;
-                                a.click();
-                            }}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-2 rounded-lg h-12 px-6 bg-white hover:bg-gray-200 text-background-dark transition-all font-bold tracking-wide shadow-lg hover:shadow-xl hover:scale-105 active:scale-95"
+                            onClick={exportWithAnnotations}
+                            disabled={isExporting}
+                            className={cn(
+                                "flex-1 md:flex-none flex items-center justify-center gap-2 rounded-lg h-12 px-6 transition-all font-bold tracking-wide shadow-lg active:scale-95 min-w-[180px]",
+                                isExporting
+                                    ? "bg-surface-dark text-muted cursor-not-allowed border border-surface-hover"
+                                    : "bg-white hover:bg-gray-200 text-background-dark hover:shadow-xl hover:scale-105"
+                            )}
                         >
-                            <span className="material-symbols-outlined text-[20px]">download</span>
-                            <span>Download Video</span>
+                            {isExporting ? (
+                                <>
+                                    <div className="size-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                    <span>{Math.round(exportProgress)}% Exportando...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="material-symbols-outlined text-[20px]">movie_edit</span>
+                                    <span>Descargar con Feedback</span>
+                                </>
+                            )}
                         </button>
+
                     </div>
 
                     <button onClick={() => router.push('/action')} className="w-full md:w-auto flex items-center justify-center gap-2 rounded-lg h-12 px-8 bg-primary hover:bg-[#0fdc50] text-background-dark transition-all font-bold tracking-wide shadow-[0_0_20px_rgba(19,236,91,0.3)] hover:shadow-[0_0_25px_rgba(19,236,91,0.5)] hover:scale-105 active:scale-95 group">
