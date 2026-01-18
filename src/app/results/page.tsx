@@ -13,6 +13,8 @@ import { sessionStore } from "@/lib/sessionStore";
 
 
 
+
+
 export default function ResultsPage() {
     const router = useRouter();
     const [session, setSession] = useState<any>(null);
@@ -51,19 +53,23 @@ export default function ResultsPage() {
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        // Set high res for export
-        canvas.width = video.videoWidth || 1280;
-        canvas.height = video.videoHeight || 720;
+        // Set resolution based on video source
+        const width = video.videoWidth || 1280;
+        const height = video.videoHeight || 720;
+        canvas.width = width;
+        canvas.height = height;
+
+        // Calculate scaling factor based on a reference height (720px)
+        // to make overlays "responsive" to the video resolution.
+        const scale = height / 720;
 
         const stream = canvas.captureStream(30); // 30 FPS
 
-        // Add Audio (Note: Audio will also be 4x faster during recording, but synced)
+        // Add Audio
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
         const dest = audioContext.createMediaStreamDestination();
         const source = audioContext.createMediaElementSource(video);
         source.connect(dest);
-
-        // Don't connect to audioContext.destination to avoid hearing the 4x audio
 
         const combinedStream = new MediaStream([
             ...stream.getVideoTracks(),
@@ -89,7 +95,7 @@ export default function ResultsPage() {
             setExportProgress(0);
             video.pause();
             video.currentTime = 0;
-            video.muted = isMuted; // Restore original
+            video.muted = isMuted;
         };
 
         const drawFrame = () => {
@@ -98,7 +104,7 @@ export default function ResultsPage() {
             // 1. Draw Video
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            // 2. Draw Annotations (Pixel-Perfect UI Clone)
+            // 2. Draw Annotations (Proportional to Resolution)
             const currentTime = video.currentTime;
             const events = session.analysis?.events || [];
             const activeEvents = events.filter((e: any) => currentTime >= e.start && currentTime <= e.end);
@@ -118,40 +124,65 @@ export default function ResultsPage() {
                     event.severity === 'medium';
                 const color = isError ? "#eab308" : "#13ec5b";
 
-                // Get count for fillers
                 const count = events.filter((e: any) => e.type === event.type && e.start <= event.start).length;
 
-                // --- Draw Bounding Box (rounded-3xl style) ---
+                // --- Draw Bounding Box ---
                 ctx.beginPath();
-                const radius = 30; // Matches rounded-3xl
-                ctx.moveTo(x + radius, y);
-                ctx.lineTo(x + w - radius, y);
-                ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
-                ctx.lineTo(x + w, y + h - radius);
-                ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
-                ctx.lineTo(x + radius, y + h);
-                ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
-                ctx.lineTo(x, y + radius);
-                ctx.quadraticCurveTo(x, y, x + radius, y);
+                const boxRadius = 24 * scale;
+                ctx.moveTo(x + boxRadius, y);
+                ctx.lineTo(x + w - boxRadius, y);
+                ctx.quadraticCurveTo(x + w, y, x + w, y + boxRadius);
+                ctx.lineTo(x + w, y + h - boxRadius);
+                ctx.quadraticCurveTo(x + w, y + h, x + w - boxRadius, y + h);
+                ctx.lineTo(x + boxRadius, y + h);
+                ctx.quadraticCurveTo(x, y + h, x, y + h - boxRadius);
+                ctx.lineTo(x, y + boxRadius);
+                ctx.quadraticCurveTo(x, y, x + boxRadius, y);
                 ctx.closePath();
 
-                ctx.strokeStyle = `${color}66`; // 40% opacity
-                ctx.lineWidth = 4;
+                ctx.strokeStyle = `${color}88`; // slightly more opaque
+                ctx.lineWidth = 2 * scale;
                 ctx.stroke();
 
-                // --- Draw Glass Pill Label ---
+                // --- Draw Feedback Pill with Wrapping ---
                 const labelText = `${event.description}${event.type === 'filler' ? ` (#${count})` : ''}`.toUpperCase();
-                ctx.font = "bold 16px 'Space Grotesk', sans-serif";
-                const textWidth = ctx.measureText(labelText).width;
-                const pillPadding = 30;
-                const pillWidth = textWidth + pillPadding + 40; // Extra for dot
-                const pillHeight = 44;
-                const pillX = x + (w / 2) - (pillWidth / 2);
-                const pillY = y - 60;
 
-                // Pill background (Glass effect)
+                const fontSize = Math.max(10, 12 * scale);
+                ctx.font = `bold ${fontSize}px 'Space Grotesk', sans-serif`;
+                ctx.letterSpacing = `${2 * scale}px`;
+
+                const pillPadding = 18 * scale;
+                const dotSpace = 34 * scale;
+                const maxTextWidth = canvas.width * 0.85;
+
+                // Text Wrapping
+                const words = labelText.split(' ');
+                const lines: string[] = [];
+                let currentLine = words[0];
+
+                for (let i = 1; i < words.length; i++) {
+                    const testLine = currentLine + ' ' + words[i];
+                    if (ctx.measureText(testLine).width > maxTextWidth - dotSpace) {
+                        lines.push(currentLine);
+                        currentLine = words[i];
+                    } else {
+                        currentLine = testLine;
+                    }
+                }
+                lines.push(currentLine);
+
+                const lineHeights = fontSize * 1.4;
+                const longestLineWidth = lines.reduce((max, l) => Math.max(max, ctx.measureText(l).width), 0);
+                const pillWidth = longestLineWidth + pillPadding + dotSpace;
+                const pillHeight = (lines.length * lineHeights) + (pillPadding * 1.5);
+
+                let pillX = x + (w / 2) - (pillWidth / 2);
+                pillX = Math.max(15 * scale, Math.min(canvas.width - pillWidth - 15 * scale, pillX));
+                const pillY = y - (pillHeight + 10 * scale);
+
+                // Background
                 ctx.beginPath();
-                const pr = 22; // pill radius
+                const pr = lines.length > 1 ? 12 * scale : pillHeight / 2;
                 ctx.moveTo(pillX + pr, pillY);
                 ctx.lineTo(pillX + pillWidth - pr, pillY);
                 ctx.quadraticCurveTo(pillX + pillWidth, pillY, pillX + pillWidth, pillY + pr);
@@ -163,36 +194,40 @@ export default function ResultsPage() {
                 ctx.quadraticCurveTo(pillX, pillY, pillX + pr, pillY);
                 ctx.closePath();
 
-                ctx.fillStyle = "rgba(16, 34, 22, 0.85)"; // Matches background-dark with transparency
+                ctx.fillStyle = "rgba(10, 20, 15, 0.95)";
                 ctx.fill();
-                ctx.strokeStyle = "rgba(28, 46, 34, 0.9)"; // surface-dark
-                ctx.lineWidth = 1;
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+                ctx.lineWidth = 1 * scale;
                 ctx.stroke();
 
-                // Pulsing-style Dot
+                // Dot (aligned with first line)
+                const dotX = pillX + 18 * scale;
+                const firstLineY = pillY + (pillPadding * 1.1) + (fontSize / 2);
                 ctx.beginPath();
-                ctx.arc(pillX + 20, pillY + (pillHeight / 2), 5, 0, Math.PI * 2);
+                ctx.arc(dotX, firstLineY, 4 * scale, 0, Math.PI * 2);
                 ctx.fillStyle = color;
-                ctx.shadowBlur = 10;
+                ctx.shadowBlur = 8 * scale;
                 ctx.shadowColor = color;
                 ctx.fill();
                 ctx.shadowBlur = 0;
 
-                // Text
+                // Lines
                 ctx.fillStyle = "#ffffff";
-                ctx.letterSpacing = "2px";
-                ctx.fillText(labelText, pillX + 35, pillY + (pillHeight / 2) + 6);
-                ctx.letterSpacing = "0px"; // Reset
+                lines.forEach((l, idx) => {
+                    ctx.fillText(l, dotX + 16 * scale, firstLineY + (idx * lineHeights) + (fontSize * 0.3));
+                });
+                ctx.letterSpacing = "0px";
             });
 
             setExportProgress((video.currentTime / video.duration) * 100);
             if (!video.ended) requestAnimationFrame(drawFrame);
         };
 
-        // Standard Speed Mode: 1x speed export for maximal fidelity
+        // Standard Speed Mode
         video.currentTime = 0;
         video.playbackRate = 1.0;
-        video.muted = false; // Keep audio audible if desired, or set to true if user prefers quiet export
+        video.muted = true; // Use true for silent, or false if audio is needed. 
+        // Note: combinedStream already contains audio tracks.
 
         video.play();
         recorder.start();
@@ -202,9 +237,6 @@ export default function ResultsPage() {
             recorder.stop();
         };
     };
-
-
-
 
     const updateProgress = () => {
         if (videoRef.current) {

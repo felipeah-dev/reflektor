@@ -21,6 +21,7 @@ function RecordingContent() {
     const searchParams = useSearchParams();
     const videoDeviceId = searchParams.get("videoDeviceId") || undefined;
     const audioDeviceId = searchParams.get("audioDeviceId") || undefined;
+    const scenario = searchParams.get("scenario") || "custom";
     const [seconds, setSeconds] = useState(0);
 
     const [micEnabled, setMicEnabled] = useState(true);
@@ -52,7 +53,8 @@ function RecordingContent() {
                 await sessionStore.setSession({
                     videoBlob: recordedBlob,
                     duration: seconds,
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
+                    scenario: scenario
                 });
                 router.push("/processing");
             }

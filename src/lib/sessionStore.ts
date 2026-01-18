@@ -7,6 +7,7 @@ type SessionData = {
     duration: number;
     timestamp: number;
     analysis?: any; // Store Gemini analysis results (summary + events)
+    scenario?: string; // The practice context (sales, pitch, speaking)
 };
 
 const DB_NAME = "ReflektorSessions";
@@ -36,7 +37,7 @@ function getDB(): Promise<IDBDatabase> {
 }
 
 export const sessionStore = {
-    async setSession(data: { videoBlob: Blob; duration: number; timestamp: number; analysis?: any }) {
+    async setSession(data: { videoBlob: Blob; duration: number; timestamp: number; analysis?: any; scenario?: string }) {
         const db = await getDB();
         const tx = db.transaction(STORE_NAME, "readwrite");
         const store = tx.objectStore(STORE_NAME);
@@ -47,7 +48,8 @@ export const sessionStore = {
             videoBlob: data.videoBlob,
             duration: data.duration,
             timestamp: data.timestamp,
-            analysis: (data as any).analysis || []
+            analysis: (data as any).analysis || [],
+            scenario: data.scenario
         }, 'current');
 
         return new Promise<void>((resolve, reject) => {

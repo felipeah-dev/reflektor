@@ -1,15 +1,56 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-export async function analyzeVideo(videoBlob: Blob, onStatusUpdate: (msg: string) => void) {
+export async function analyzeVideo(videoBlob: Blob, onStatusUpdate: (msg: string) => void, scenario: string = "custom") {
     try {
         onStatusUpdate("Obtaining secure connection token...");
         const tokenResponse = await fetch('/api/gemini/token');
         const { token } = await tokenResponse.json();
 
         const genAI = new GoogleGenerativeAI(token);
+
+        let contextInstruction = "";
+        switch (scenario) {
+            case "sales":
+                contextInstruction = `
+                # SALES PRESENTATION CONTEXT
+                - Focus on PERSUASION and handling OBJECTIONS.
+                - Evaluate if the speaker is articulating benefits clearly (Value Proposition).
+                - Check for clarity in call-to-action moments.
+                - Analyze confidence during pricing or "the ask" moments.
+                `;
+                break;
+            case "pitch":
+                contextInstruction = `
+                # STARTUP PITCH CONTEXT
+                - Focus on NARRATIVE flow and investor confidence.
+                - Evaluate the impact of the problem-solution alignment.
+                - Check for clarity in market opportunity or traction descriptions.
+                - Analyze body language for "founder energy" (passion and authority).
+                `;
+                break;
+            case "speaking":
+                contextInstruction = `
+                # PUBLIC SPEAKING CONTEXT
+                - Focus on ORATORY techniques and audience engagement.
+                - Evaluate usage of the stage/frame (spatial awareness).
+                - Check for vocal variety (pitch, volume, and meaningful pauses).
+                - Analyze eye contact patterns to engage the whole "room" (camera).
+                `;
+                break;
+            default:
+                contextInstruction = `
+                # GENERAL COMMUNICATION CONTEXT
+                - Provide broad feedback on clarity, pace, and presence.
+                - Identify any distractions or filler words.
+                `;
+        }
+
         const model = genAI.getGenerativeModel({
             model: "gemini-3-flash-preview",
             systemInstruction: `You are an elite Spatial-Temporal Communication Coach specializing in real-time video analysis of presentations and speeches.
+            
+            ${contextInstruction}
+
 
         # LANGUAGE DETECTION
         - Automatically detect if the speaker is using English or Spanish
@@ -112,7 +153,12 @@ export async function analyzeVideo(videoBlob: Blob, onStatusUpdate: (msg: string
                     data: base64Video,
                 }
             },
-            "Analyze this presentation. 1) Detect the primary language. 2) Identify specific moments of eye contact loss or gestures. 3) Detect REAL filler words (fillers/muletillas) with high precision according to the detected language. Return ONLY the JSON object."
+            `Analyze this ${scenario} session. 
+            1) Detect the primary language. 
+            2) Identify specific moments of eye contact loss or gestures. 
+            3) Detect REAL filler words (fillers/muletillas) with high precision.
+            4) Provide coaching advice SPECIFIC to the ${scenario} context provided in system instructions.
+            Return ONLY the JSON object.`
         ]);
 
 
