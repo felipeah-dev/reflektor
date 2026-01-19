@@ -13,6 +13,7 @@ export default function ProcessingPage() {
     const [progress, setProgress] = useState(0);
     const [statusMsg, setStatusMsg] = useState("We are analyzing your multimodal data with AI. Please do not close this window.");
     const [isAnalysisComplete, setIsAnalysisComplete] = useState(false);
+    const [hasError, setHasError] = useState(false);
 
     useEffect(() => {
         const runAnalysis = async () => {
@@ -36,7 +37,7 @@ export default function ProcessingPage() {
             } catch (error) {
                 console.error("Analysis failed:", error);
                 setStatusMsg("Analysis failed. Please try again.");
-                // Error handling: maybe allow retry or redirect back
+                setHasError(true);
             }
         };
 
@@ -91,6 +92,15 @@ export default function ProcessingPage() {
                         <p className="text-[#9db9a6] text-lg font-light">
                             {statusMsg}
                         </p>
+                        {hasError && (
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="mt-4 px-6 py-2 bg-primary text-background-dark font-bold rounded-full hover:bg-primary/90 transition-colors flex items-center gap-2 w-fit mx-auto md:mx-0"
+                            >
+                                <span className="material-symbols-outlined">refresh</span>
+                                Retry Analysis
+                            </button>
+                        )}
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mt-4">
                         <div className="flex flex-col gap-6 order-2 lg:order-1">

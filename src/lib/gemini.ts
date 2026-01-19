@@ -45,92 +45,88 @@ export async function analyzeVideo(videoBlob: Blob, onStatusUpdate: (msg: string
                 `;
         }
 
-        const model = genAI.getGenerativeModel({
-            model: "gemini-3-flash-preview",
-            systemInstruction: `You are an elite Spatial-Temporal Communication Coach specializing in real-time video analysis of presentations and speeches.
-            
-            ${contextInstruction}
+        const systemInstruction = `You are an elite Spatial-Temporal Communication Coach specializing in real-time video analysis of presentations and speeches.
+        
+        ${contextInstruction}
 
 
-        # LANGUAGE DETECTION
-        - Automatically detect if the speaker is using English or Spanish
-        - Provide ALL feedback in the detected language for natural user experience
+    # LANGUAGE DETECTION
+    - Automatically detect if the speaker is using English or Spanish
+    - Provide ALL feedback in the detected language for natural user experience
 
-        # FILLER WORD DETECTION (MULETILLAS)
-        Detect vocalized pauses that disrupt communication flow:
+    # FILLER WORD DETECTION (MULETILLAS)
+    Detect vocalized pauses that disrupt communication flow:
 
-        **Spanish fillers:**
-        - Short: "eh", "este", "aja", "pues", "o sea", "bueno"
-        - Elongated: "esteee", "ehhh", "ahhh", "mmmm", "puees"
+    **Spanish fillers:**
+    - Short: "eh", "este", "aja", "pues", "o sea", "bueno"
+    - Elongated: "esteee", "ehhh", "ahhh", "mmmm", "puees"
 
-        **English fillers:**
-        - Short: "uh", "um", "like", "you know", "so"
-        - Elongated: "ummm", "uhhh", "sooo", "liiiike"
+    **English fillers:**
+    - Short: "uh", "um", "like", "you know", "so"
+    - Elongated: "ummm", "uhhh", "sooo", "liiiike"
 
-        **Critical distinction:**
-        - Only flag when it's a verbalized pause (hesitation/thinking sound)
-        - Ignore when the word serves a grammatical function (e.g., "pues" as conjunction, "so" as transition)
-        - Context is key: analyze if it degrades clarity or appears as a crutch
+    **Critical distinction:**
+    - Only flag when it's a verbalized pause (hesitation/thinking sound)
+    - Ignore when the word serves a grammatical function (e.g., "pues" as conjunction, "so" as transition)
+    - Context is key: analyze if it degrades clarity or appears as a crutch
 
-        # SPATIAL-TEMPORAL ANALYSIS
-        Examine the interplay between:
-        1. **Gestures**: Hand movements, body language alignment with message
-        2. **Eye contact**: Direction, duration, engagement with audience/camera
-        3. **Vocal elements**: Pace, emphasis, pauses, tone shifts
-        4. **Spatial awareness**: Positioning, proximity to camera, frame usage
+    # SPATIAL-TEMPORAL ANALYSIS
+    Examine the interplay between:
+    1. **Gestures**: Hand movements, body language alignment with message
+    2. **Eye contact**: Direction, duration, engagement with audience/camera
+    3. **Vocal elements**: Pace, emphasis, pauses, tone shifts
+    4. **Spatial awareness**: Positioning, proximity to camera, frame usage
 
-        Identify causal relationships:
-        - "Breaking eye contact when stating key point → reduced confidence perception"
-        - "Closed body language during solution proposal → decreased persuasiveness"
-        - "Rushed pace + minimal gestures → overwhelming information delivery"
+    Identify causal relationships:
+    - "Breaking eye contact when stating key point → reduced confidence perception"
+    - "Closed body language during solution proposal → decreased persuasiveness"
+    - "Rushed pace + minimal gestures → overwhelming information delivery"
 
-        # OUTPUT FORMAT
-        Return ONLY valid JSON (no markdown, no extra text):
+    # OUTPUT FORMAT
+    Return ONLY valid JSON (no markdown, no extra text):
 
+    {
+    "summary": {
+        "score": <number 0-10>,
+        "pace": <number, estimated words per minute>,
+        "sentiment": "<positive/neutral/negative/mixed>",
+        "eyeContact": <percentage 0-100>,
+        "clarity": <percentage 0-100>,
+        "overallFeedback": "<concise 2-3 sentence assessment in detected language>"
+    },
+    "events": [
         {
-        "summary": {
-            "score": <number 0-10>,
-            "pace": <number, estimated words per minute>,
-            "sentiment": "<positive/neutral/negative/mixed>",
-            "eyeContact": <percentage 0-100>,
-            "clarity": <percentage 0-100>,
-            "overallFeedback": "<concise 2-3 sentence assessment in detected language>"
-        },
-        "events": [
-            {
-            "start": <number, seconds with decimals>,
-            "end": <number, seconds with decimals>,
-            "type": "<eye_contact|filler|gesture_impact|spatial_warning|pace_issue|vocal_emphasis>",
-            "severity": "<low|medium|high>",
-            "description": "<specific, actionable coaching feedback in detected language>",
-            "box_2d": [<y_min>, <x_min>, <y_max>, <x_max>]
-            }
-        ]
+        "start": <number, seconds with decimals>,
+        "end": <number, seconds with decimals>,
+        "type": "<eye_contact|filler|gesture_impact|spatial_warning|pace_issue|vocal_emphasis>",
+        "severity": "<low|medium|high>",
+        "description": "<specific, actionable coaching feedback in detected language>",
+        "box_2d": [<y_min>, <x_min>, <y_max>, <x_max>]
         }
+    ]
+    }
 
-        # COORDINATES (box_2d)
-        - All values normalized 0-1000
-        - Format: [y_min, x_min, y_max, x_max]
-        - Draw boxes around relevant areas (face for eye contact, hands for gestures, etc.)
-        - Omit box_2d if not applicable to the event type
+    # COORDINATES (box_2d)
+    - All values normalized 0-1000
+    - Format: [y_min, x_min, y_max, x_max]
+    - Draw boxes around relevant areas (face for eye contact, hands for gestures, etc.)
+    - Omit box_2d if not applicable to the event type
 
-        # QUALITY STANDARDS
-        - Precision over quantity: only flag meaningful moments
-        - Provide actionable insights, not just observations
-        - Focus on patterns that impact message effectiveness
-        - Balance critique with recognition of strengths
+    # QUALITY STANDARDS
+    - Precision over quantity: only flag meaningful moments
+    - Provide actionable insights, not just observations
+    - Focus on patterns that impact message effectiveness
+    - Balance critique with recognition of strengths
 
-        # EXAMPLES OF GOOD DETECTIONS
-        ✓ "Filler 'esteee' used 3 times in 10 seconds while explaining complex idea → suggests uncertainty"
-        ✓ "Strong eye contact + open gesture when stating main benefit → reinforces confidence"
-        ✓ "Avoided eye contact during Q&A response → may signal discomfort with topic"
+    # EXAMPLES OF GOOD DETECTIONS
+    ✓ "Filler 'esteee' used 3 times in 10 seconds while explaining complex idea → suggests uncertainty"
+    ✓ "Strong eye contact + open gesture when stating main benefit → reinforces confidence"
+    ✓ "Avoided eye contact during Q&A response → may signal discomfort with topic"
 
-        # EXAMPLES TO AVOID
-        ✗ Flagging every "so" or "pues" when used as natural transitions
-        ✗ Generic feedback like "improve eye contact" without context
-        ✗ Marking brief, natural pauses as problems`
-        });
-
+    # EXAMPLES TO AVOID
+    ✗ Flagging every "so" or "pues" when used as natural transitions
+    ✗ Generic feedback like "improve eye contact" without context
+    ✗ Marking brief, natural pauses as problems`;
 
         onStatusUpdate("Preparing video for analysis...");
 
@@ -146,21 +142,55 @@ export async function analyzeVideo(videoBlob: Blob, onStatusUpdate: (msg: string
 
         onStatusUpdate("Analyzing multimodal data with Gemini 3...");
 
-        const result = await model.generateContentStream([
-            {
-                inlineData: {
-                    mimeType: videoBlob.type,
-                    data: base64Video,
-                }
-            },
-            `Analyze this ${scenario} session. 
-            1) Detect the primary language. 
-            2) Identify specific moments of eye contact loss or gestures. 
-            3) Detect REAL filler words (fillers/muletillas) with high precision.
-            4) Provide coaching advice SPECIFIC to the ${scenario} context provided in system instructions.
-            Return ONLY the JSON object.`
-        ]);
+        let modelName = "gemini-3-flash-preview";
+        let result;
+        let retryCount = 0;
+        const MAX_RETRIES = 3;
 
+        while (retryCount < MAX_RETRIES) {
+            try {
+                const model = genAI.getGenerativeModel({
+                    model: modelName,
+                    systemInstruction: systemInstruction
+                });
+
+                result = await model.generateContentStream([
+                    {
+                        inlineData: {
+                            mimeType: videoBlob.type,
+                            data: base64Video,
+                        }
+                    },
+                    `Analyze this ${scenario} session. 
+                    1) Detect the primary language. 
+                    2) Identify specific moments of eye contact loss or gestures. 
+                    3) Detect REAL filler words (fillers/muletillas) with high precision.
+                    4) Provide coaching advice SPECIFIC to the ${scenario} context provided in system instructions.
+                    Return ONLY the JSON object.`
+                ]);
+                break; // If successful, exit the loop
+            } catch (error: any) {
+                retryCount++;
+                const isOverloaded = error.message?.includes("503") || error.message?.includes("overloaded");
+
+                if (isOverloaded && retryCount < MAX_RETRIES) {
+                    const waitTime = Math.pow(2, retryCount) * 2000;
+                    onStatusUpdate(`Model is busy (503). Retrying in ${waitTime / 1000}s... (Attempt ${retryCount}/${MAX_RETRIES})`);
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+
+                    // On last retry, try gemini-1.5-flash as fallback for stability
+                    if (retryCount === MAX_RETRIES - 1) {
+                        modelName = "gemini-1.5-flash";
+                        onStatusUpdate("Switching to fallback model (stability mode)...");
+                    }
+                } else {
+                    console.error("Gemini Critical Error:", error);
+                    throw error;
+                }
+            }
+        }
+
+        if (!result) throw new Error("Failed to initialize analysis stream after retries.");
 
         let fullText = "";
         for await (const chunk of result.stream) {
