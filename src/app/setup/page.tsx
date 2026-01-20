@@ -23,8 +23,24 @@ function SetupContent() {
     const [micEnabled, setMicEnabled] = useState(true);
     const [cameraEnabled, setCameraEnabled] = useState(true);
 
+    const [teleprompterEnabled, setTeleprompterEnabled] = useState(true);
+    const [scriptText, setScriptText] = useState("");
+
     const isReady = hasCameraPermission === true && hasMicPermission === true;
 
+    useEffect(() => {
+        // Load persist script
+        const savedScript = localStorage.getItem("reflektor_script");
+        if (savedScript) setScriptText(savedScript);
+
+        const savedPromptEnabled = localStorage.getItem("reflektor_teleprompter_enabled");
+        if (savedPromptEnabled !== null) setTeleprompterEnabled(savedPromptEnabled === "true");
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem("reflektor_script", scriptText);
+        localStorage.setItem("reflektor_teleprompter_enabled", teleprompterEnabled.toString());
+    }, [scriptText, teleprompterEnabled]);
 
     useEffect(() => {
         if (hasCameraPermission || hasMicPermission) {
@@ -34,20 +50,30 @@ function SetupContent() {
                 setVideoDevices(video);
                 setAudioDevices(audio);
 
-                // Set defaults if not selected
                 if (!selectedVideoId && video.length > 0) setSelectedVideoId(video[0].deviceId);
                 if (!selectedAudioId && audio.length > 0) setSelectedAudioId(audio[0].deviceId);
             });
         }
     }, [hasCameraPermission, hasMicPermission]);
 
-
+    const estimatedTime = () => {
+        // Simple heuristic: 130 words per minute
+        const words = scriptText.trim().split(/\s+/).filter(w => w.length > 0).length;
+        const totalSeconds = Math.round((words / 130) * 60);
+        const mins = Math.floor(totalSeconds / 60);
+        const secs = totalSeconds % 60;
+        return `${mins}m ${secs.toString().padStart(2, '0')}s`;
+    };
 
     return (
-        <div className="bg-background-dark min-h-screen flex flex-col font-display text-white">
-            {/* Top Navigation */}
+        <div className="bg-background-dark min-h-screen flex flex-col font-display text-white selection:bg-primary selection:text-background-dark">
             <header className="flex items-center justify-between whitespace-nowrap border-b border-[#28392e] px-4 lg:px-10 py-4 bg-background-dark sticky top-0 z-50">
-                <Logo />
+                <div className="flex items-center gap-3">
+                    <div className="size-6 text-primary">
+                        <span className="material-symbols-outlined !text-2xl">graphic_eq</span>
+                    </div>
+                    <h2 className="text-lg lg:text-xl font-bold tracking-tight uppercase">REFLEKTOR</h2>
+                </div>
 
                 <Link
                     href="/"
@@ -57,49 +83,136 @@ function SetupContent() {
                     <span className="truncate hidden sm:inline">Cancel session</span>
                 </Link>
             </header>
-            {/* Main Content */}
+
             <main className="flex-1 w-full max-w-[1400px] mx-auto px-4 lg:px-10 py-6 lg:py-8 flex flex-col lg:flex-row gap-8">
-                {/* Left Column: Camera Preview (Hero) */}
-                <section className="flex-1 flex flex-col gap-4">
+                <section className="flex-1 flex flex-col gap-6">
                     <div className="flex flex-col gap-2 mb-2">
-                        <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-white">
-                            Session Setup
-                        </h1>
-                        <p className="text-[#9db9a6] text-base font-normal">
-                            Check your audio and video to ensure the best AI analysis quality.
-                        </p>
+                        <h1 className="text-3xl lg:text-4xl font-bold tracking-tight">Session Setup</h1>
+                        <p className="text-[#9db9a6] text-base font-normal">Check your audio, video and script to ensure the best AI analysis quality.</p>
                     </div>
-                    {/* Video Container */}
-                    <CameraPreview
-                        onPermissionChange={setHasCameraPermission}
-                        onMicPermissionChange={setHasMicPermission}
-                        onStream={setActiveStream}
-                        videoDeviceId={selectedVideoId}
-                        audioDeviceId={selectedAudioId}
-                        videoEnabled={cameraEnabled}
-                        audioEnabled={micEnabled}
-                        onToggleVideo={() => setCameraEnabled(!cameraEnabled)}
-                        onToggleAudio={() => setMicEnabled(!micEnabled)}
-                    />
 
+                    <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl ring-1 ring-[#28392e] group">
+                        <CameraPreview
+                            onPermissionChange={setHasCameraPermission}
+                            onMicPermissionChange={setHasMicPermission}
+                            onStream={setActiveStream}
+                            videoDeviceId={selectedVideoId}
+                            audioDeviceId={selectedAudioId}
+                            videoEnabled={cameraEnabled}
+                            audioEnabled={micEnabled}
+                            onToggleVideo={() => setCameraEnabled(!cameraEnabled)}
+                            onToggleAudio={() => setMicEnabled(!micEnabled)}
+                            showOverlays={false}
+                        />
 
+                        {/* Centering Guide Overlay */}
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div className="w-[35%] h-[60%] border-2 border-dashed border-white/30 rounded-[50%] relative">
+                                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/50 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-sm whitespace-nowrap">CENTER YOUR FACE</div>
+                            </div>
+                        </div>
 
-                    {/* Device Selectors */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-                        <label className="flex flex-col gap-2 transition-opacity" style={{ opacity: hasCameraPermission === true ? 1 : 0.6 }}>
-                            <span className="text-sm font-medium text-[#9db9a6]">
-                                Camera
-                            </span>
+                        <div className="absolute top-4 right-4 flex gap-2">
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-full text-white text-xs font-medium border border-white/10">
+                                <span className="material-symbols-outlined !text-sm text-primary">videocam</span>
+                                <span>HD 1080p</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-full text-white text-xs font-medium border border-white/10">
+                                <span className="material-symbols-outlined !text-sm text-primary">mic</span>
+                                <span>Stereo</span>
+                            </div>
+                        </div>
+
+                        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent flex justify-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <button
+                                onClick={() => setCameraEnabled(!cameraEnabled)}
+                                className="p-2 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white transition-colors"
+                            >
+                                <span className="material-symbols-outlined">{cameraEnabled ? "videocam" : "videocam_off"}</span>
+                            </button>
+                            <button
+                                onClick={() => setMicEnabled(!micEnabled)}
+                                className="p-2 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white transition-colors"
+                            >
+                                <span className="material-symbols-outlined">{micEnabled ? "mic" : "mic_off"}</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Teleprompter Card */}
+                    <div className="bg-[#1c271f] rounded-xl p-6 border border-[#28392e] shadow-sm">
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                                    <span className="material-symbols-outlined">description</span>
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-white">Teleprompter</h3>
+                                    <p className="text-xs text-[#9db9a6]">Show your script during recording</p>
+                                </div>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    className="sr-only peer"
+                                    checked={teleprompterEnabled}
+                                    onChange={() => setTeleprompterEnabled(!teleprompterEnabled)}
+                                />
+                                <div className="w-11 h-6 bg-[#28392e] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary shadow-inner"></div>
+                            </label>
+                        </div>
+
+                        <div className="flex flex-col gap-4">
+                            <div className="relative group">
+                                <textarea
+                                    className="w-full p-4 rounded-lg bg-[#102216] border border-[#3b5443] text-sm text-white placeholder-gray-500 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all resize-none min-h-[120px]"
+                                    placeholder="Write or paste your script or key points here..."
+                                    value={scriptText}
+                                    onChange={(e) => setScriptText(e.target.value)}
+                                    rows={4}
+                                />
+                                <div className="absolute bottom-3 right-3 flex items-center gap-2">
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                const text = await navigator.clipboard.readText();
+                                                setScriptText(text);
+                                            } catch (err) {
+                                                console.error("Paste failed", err);
+                                            }
+                                        }}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1c271f] hover:bg-[#28392e] border border-[#3b5443] rounded-md text-xs font-medium transition-colors text-white"
+                                    >
+                                        <span className="material-symbols-outlined !text-sm">content_paste</span>
+                                        Paste Script
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-4 text-xs text-[#9db9a6]">
+                                <div className="flex items-center gap-1">
+                                    <span className="material-symbols-outlined !text-sm">timer</span>
+                                    <span>Estimated: {estimatedTime()}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <span className="material-symbols-outlined !text-sm">notes</span>
+                                    <span>{scriptText.length} characters</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <label className="flex flex-col gap-2">
+                            <span className="text-sm font-medium text-[#9db9a6]">Camera</span>
                             <div className="relative">
                                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                                    <span className="material-symbols-outlined !text-xl">
-                                        videocam
-                                    </span>
+                                    <span className="material-symbols-outlined !text-xl">videocam</span>
                                 </div>
                                 <select
                                     value={selectedVideoId}
                                     onChange={(e) => setSelectedVideoId(e.target.value)}
-                                    className="w-full pl-10 pr-10 py-3 rounded-lg bg-[#1c271f] border border-[#3b5443] text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary appearance-none cursor-pointer text-sm font-medium"
+                                    className="w-full pl-10 pr-4 py-3 rounded-lg bg-[#1c271f] border border-[#3b5443] text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary appearance-none cursor-pointer text-sm font-medium"
                                 >
                                     {videoDevices.map(device => (
                                         <option key={device.deviceId} value={device.deviceId}>
@@ -109,26 +222,20 @@ function SetupContent() {
                                     {videoDevices.length === 0 && <option>No cameras found</option>}
                                 </select>
                                 <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-                                    <span className="material-symbols-outlined !text-xl">
-                                        expand_more
-                                    </span>
+                                    <span className="material-symbols-outlined !text-xl">expand_more</span>
                                 </div>
                             </div>
                         </label>
-                        <label className="flex flex-col gap-2 transition-opacity" style={{ opacity: hasMicPermission === true ? 1 : 0.6 }}>
-                            <span className="text-sm font-medium text-[#9db9a6]">
-                                Microphone
-                            </span>
+                        <label className="flex flex-col gap-2">
+                            <span className="text-sm font-medium text-[#9db9a6]">Microphone</span>
                             <div className="relative">
                                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                                    <span className="material-symbols-outlined !text-xl">
-                                        mic
-                                    </span>
+                                    <span className="material-symbols-outlined !text-xl">mic</span>
                                 </div>
                                 <select
                                     value={selectedAudioId}
                                     onChange={(e) => setSelectedAudioId(e.target.value)}
-                                    className="w-full pl-10 pr-10 py-3 rounded-lg bg-[#1c271f] border border-[#3b5443] text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary appearance-none cursor-pointer text-sm font-medium"
+                                    className="w-full pl-10 pr-4 py-3 rounded-lg bg-[#1c271f] border border-[#3b5443] text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary appearance-none cursor-pointer text-sm font-medium"
                                 >
                                     {audioDevices.map(device => (
                                         <option key={device.deviceId} value={device.deviceId}>
@@ -138,137 +245,103 @@ function SetupContent() {
                                     {audioDevices.length === 0 && <option>No microphones found</option>}
                                 </select>
                                 <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-                                    <span className="material-symbols-outlined !text-xl">
-                                        expand_more
-                                    </span>
+                                    <span className="material-symbols-outlined !text-xl">expand_more</span>
                                 </div>
                             </div>
                         </label>
-
                     </div>
                 </section>
-                {/* Right Column: Checklist & Actions */}
-                <aside className="w-full lg:w-[360px] flex flex-col gap-6 pt-4 lg:pt-24">
-                    {/* Checklist Card */}
+
+                <aside className="w-full lg:w-[360px] flex flex-col gap-6 pt-0 lg:pt-24">
                     <div className="bg-[#1c271f] rounded-xl p-6 border border-[#28392e] shadow-sm">
                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                            <span className="material-symbols-outlined text-primary">
-                                checklist
-                            </span>
+                            <span className="material-symbols-outlined text-primary">checklist</span>
                             Checklist
                         </h3>
                         <div className="flex flex-col gap-4">
-                            {/* Item 1: Camera */}
                             <div className="flex items-start gap-3">
                                 <div className={cn(
                                     "shrink-0 size-5 rounded-full flex items-center justify-center text-background-dark mt-0.5 transition-colors",
-                                    hasCameraPermission === true ? "bg-primary" : hasCameraPermission === false ? "bg-red-500" : "bg-gray-600"
+                                    hasCameraPermission === true ? "bg-primary" : "bg-gray-700"
                                 )}>
                                     <span className="material-symbols-outlined !text-sm font-bold">
-                                        {hasCameraPermission === true ? "check" : hasCameraPermission === false ? "close" : "more_horiz"}
+                                        {hasCameraPermission === true ? "check" : "more_horiz"}
                                     </span>
                                 </div>
                                 <div>
-                                    <p className="text-sm font-bold text-white">
-                                        {hasCameraPermission === true ? "Camera detected" : hasCameraPermission === false ? "Camera access denied" : "Detecting camera..."}
-                                    </p>
-                                    <p className="text-xs text-[#9db9a6]">
-                                        Fluid video at 30fps
-                                    </p>
+                                    <p className="text-sm font-bold text-white">Camera detected</p>
+                                    <p className="text-xs text-[#9db9a6]">Fluid video at 30fps</p>
                                 </div>
-
                             </div>
-                            {/* Item 2: Audio Level */}
+
                             <div className="flex flex-col gap-2">
                                 <div className="flex items-start gap-3">
                                     <div className={cn(
                                         "shrink-0 size-5 rounded-full flex items-center justify-center text-background-dark mt-0.5 transition-colors",
-                                        hasMicPermission === true ? "bg-primary" : hasMicPermission === false ? "bg-red-500" : "bg-gray-600"
+                                        hasMicPermission === true ? "bg-primary" : "bg-gray-700"
                                     )}>
                                         <span className="material-symbols-outlined !text-sm font-bold">
-                                            {hasMicPermission === true ? "check" : hasMicPermission === false ? "close" : "more_horiz"}
+                                            {hasMicPermission === true ? "check" : "more_horiz"}
                                         </span>
                                     </div>
                                     <div className="flex-1">
                                         <div className="flex justify-between items-center mb-1">
-                                            <p className="text-sm font-bold text-white">
-                                                {hasMicPermission === true ? "Microphone active" : hasMicPermission === false ? "Mic access denied" : "Detecting audio..."}
-                                            </p>
-                                            {hasMicPermission === true && <span className="text-xs text-primary font-mono">OK</span>}
+                                            <p className="text-sm font-bold text-white">Audio level</p>
+                                            <span className="text-xs text-primary font-mono uppercase">OK</span>
                                         </div>
-
-                                        {/* Visualizer Bars (Real-time) */}
-                                        <div style={{ opacity: (hasMicPermission === true && micEnabled) ? 1 : 0.3 }}>
-                                            <AudioVisualizer stream={activeStream} isMuted={!micEnabled} />
+                                        <div className="flex items-end justify-between h-8 gap-0.5 px-1 py-1 bg-[#102216] rounded-md border border-[#28392e]">
+                                            <div className="w-1 bg-primary/20 rounded-full h-[40%]"></div>
+                                            <div className="w-1 bg-primary/40 rounded-full h-[60%]"></div>
+                                            <div className="w-1 bg-primary/60 rounded-full h-[80%]"></div>
+                                            <div className="w-1 bg-primary rounded-full h-[50%] animate-pulse"></div>
+                                            <div className="w-1 bg-primary rounded-full h-[90%]"></div>
+                                            <div className="w-1 bg-primary/80 rounded-full h-[70%]"></div>
+                                            <div className="w-1 bg-primary/60 rounded-full h-[45%]"></div>
+                                            <div className="w-1 bg-primary/40 rounded-full h-[30%]"></div>
+                                            <div className="w-1 bg-primary/20 rounded-full h-[20%]"></div>
+                                            <div className="w-1 bg-primary/20 rounded-full h-[20%]"></div>
                                         </div>
-
-
                                     </div>
                                 </div>
                             </div>
-                            {/* Item 3: Lighting */}
+
                             <div className="flex items-start gap-3 opacity-60">
                                 <div className="shrink-0 size-5 rounded-full border-2 border-gray-400 dark:border-[#3b5443] flex items-center justify-center mt-0.5"></div>
                                 <div>
                                     <p className="text-sm font-bold text-white">Lighting</p>
-                                    <p className="text-xs text-[#9db9a6]">
-                                        Increase brightness in your environment
-                                    </p>
+                                    <p className="text-xs text-[#9db9a6]">Increase brightness in your environment</p>
                                 </div>
                             </div>
-                            {/* Item 4: Framing */}
+
                             <div className="flex items-start gap-3 transition-opacity duration-300" style={{ opacity: hasCameraPermission === true ? 1 : 0.4 }}>
                                 <div className={cn(
                                     "shrink-0 size-5 rounded-full flex items-center justify-center text-background-dark mt-0.5",
                                     hasCameraPermission === true ? "bg-primary" : "border-2 border-gray-400 dark:border-[#3b5443]"
                                 )}>
-                                    {hasCameraPermission === true && (
-                                        <span className="material-symbols-outlined !text-sm font-bold">
-                                            check
-                                        </span>
-                                    )}
+                                    {hasCameraPermission === true && <span className="material-symbols-outlined !text-sm font-bold">check</span>}
                                 </div>
                                 <div>
-                                    <p className="text-sm font-bold">Face Centered</p>
+                                    <p className="text-sm font-bold text-white">Face centered</p>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    {/* Action Area */}
+
                     <div className="flex flex-col gap-3">
                         <Link
                             href={isReady ? `/recording?scenario=${scenario}&videoDeviceId=${selectedVideoId}&audioDeviceId=${selectedAudioId}` : "#"}
-
                             className={cn(
-                                "w-full font-display font-bold text-lg h-14 rounded-lg transition-all flex items-center justify-center gap-2 group/btn",
-                                isReady
-                                    ? "bg-primary hover:bg-green-400 text-background-dark shadow-[0_0_20px_rgba(19,236,91,0.3)] hover:shadow-[0_0_30px_rgba(19,236,91,0.5)]"
-                                    : "bg-gray-700 text-gray-400 cursor-not-allowed opacity-70"
+                                "w-full bg-primary hover:bg-green-400 text-background-dark font-display font-bold text-lg h-14 rounded-lg shadow-[0_0_20px_rgba(19,236,91,0.3)] hover:shadow-[0_0_30px_rgba(19,236,91,0.5)] transition-all flex items-center justify-center gap-2 group/btn",
+                                !isReady && "opacity-50 cursor-not-allowed pointer-events-none"
                             )}
                             onClick={(e) => !isReady && e.preventDefault()}
                         >
-                            <div className={cn(
-                                "size-3 rounded-full animate-pulse",
-                                isReady ? "bg-red-600" : "bg-gray-500"
-                            )}></div>
+                            <div className="size-3 rounded-full bg-red-600 animate-pulse"></div>
                             START RECORDING
-                            <span className="material-symbols-outlined transition-transform group-hover/btn:translate-x-1">
-                                arrow_forward
-                            </span>
+                            <span className="material-symbols-outlined transition-transform group-hover/btn:translate-x-1">arrow_forward</span>
                         </Link>
-                        {!isReady && (hasCameraPermission === false || hasMicPermission === false) && (
-                            <p className="text-[10px] text-center text-red-500 font-bold bg-red-500/10 py-2 px-3 rounded-lg border border-red-500/20">
-                                {hasCameraPermission === false && hasMicPermission === false
-                                    ? "Please enable both camera and mic access to continue"
-                                    : hasCameraPermission === false
-                                        ? "Please enable your camera to continue"
-                                        : "Please enable your microphone to continue"}
-                            </p>
-                        )}
-
                         <p className="text-xs text-center text-[#9db9a6]">
-                            By continuing, you accept that the session will be analyzed by our
-                            AI.
+                            By continuing, you accept that the session will be analyzed by our IA.
                         </p>
                     </div>
                 </aside>
