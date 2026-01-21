@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useRef } from "react";
 import { CameraPreview } from "@/components/features/media/CameraPreview";
 import { AudioVisualizer } from "@/components/features/media/AudioVisualizer";
 import { useSearchParams } from "next/navigation";
@@ -25,6 +25,11 @@ function SetupContent() {
 
     const [teleprompterEnabled, setTeleprompterEnabled] = useState(true);
     const [scriptText, setScriptText] = useState("");
+    const [fontSize, setFontSize] = useState(30);
+    const [scrollSpeed, setScrollSpeed] = useState(40);
+    const [previewOffset, setPreviewOffset] = useState(0);
+    const previewRequestRef = useRef<number | null>(null);
+    const previewContainerRef = useRef<HTMLDivElement>(null);
 
     const isReady = hasCameraPermission === true && hasMicPermission === true;
 
@@ -35,12 +40,40 @@ function SetupContent() {
 
         const savedPromptEnabled = localStorage.getItem("reflektor_teleprompter_enabled");
         if (savedPromptEnabled !== null) setTeleprompterEnabled(savedPromptEnabled === "true");
+
+        const savedFontSize = localStorage.getItem("reflektor_teleprompter_font_size");
+        if (savedFontSize) setFontSize(parseInt(savedFontSize));
+
+        const savedScrollSpeed = localStorage.getItem("reflektor_teleprompter_scroll_speed");
+        if (savedScrollSpeed) setScrollSpeed(parseInt(savedScrollSpeed));
     }, []);
 
     useEffect(() => {
         localStorage.setItem("reflektor_script", scriptText);
         localStorage.setItem("reflektor_teleprompter_enabled", teleprompterEnabled.toString());
-    }, [scriptText, teleprompterEnabled]);
+        localStorage.setItem("reflektor_teleprompter_font_size", fontSize.toString());
+        localStorage.setItem("reflektor_teleprompter_scroll_speed", scrollSpeed.toString());
+    }, [scriptText, teleprompterEnabled, fontSize, scrollSpeed]);
+
+    useEffect(() => {
+        if (teleprompterEnabled && scrollSpeed > 0) {
+            const animate = () => {
+                setPreviewOffset(prev => {
+                    const next = prev + (scrollSpeed / 50);
+                    // Reset if it goes too far (simple heuristic for preview)
+                    return next > 600 ? -100 : next;
+                });
+                previewRequestRef.current = requestAnimationFrame(animate);
+            };
+            previewRequestRef.current = requestAnimationFrame(animate);
+        } else {
+            setPreviewOffset(0);
+            if (previewRequestRef.current) cancelAnimationFrame(previewRequestRef.current);
+        }
+        return () => {
+            if (previewRequestRef.current) cancelAnimationFrame(previewRequestRef.current);
+        };
+    }, [teleprompterEnabled, scrollSpeed]);
 
     useEffect(() => {
         if (hasCameraPermission || hasMicPermission) {
@@ -64,6 +97,8 @@ function SetupContent() {
         const secs = totalSeconds % 60;
         return `${mins}m ${secs.toString().padStart(2, '0')}s`;
     };
+
+    const paragraphs = scriptText.split('\n').filter(p => p.trim().length > 0);
 
     return (
         <div className="bg-background-dark min-h-screen flex flex-col font-display text-white selection:bg-primary selection:text-background-dark">
@@ -91,7 +126,7 @@ function SetupContent() {
                         <p className="text-[#9db9a6] text-base font-normal">Check your audio, video and script to ensure the best AI analysis quality.</p>
                     </div>
 
-                    <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl ring-1 ring-[#28392e] group">
+                    <div className="relative w-full max-w-3xl mx-auto aspect-video bg-black rounded-xl overflow-hidden shadow-2xl ring-1 ring-[#28392e] group">
                         <CameraPreview
                             onPermissionChange={setHasCameraPermission}
                             onMicPermissionChange={setHasMicPermission}
@@ -200,6 +235,87 @@ function SetupContent() {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Teleprompter Settings (Expandable) */}
+                        {teleprompterEnabled && (
+                            <div className="mt-6 pt-6 border-t border-[#28392e] flex flex-col gap-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-sm font-medium text-[#9db9a6] flex items-center gap-2">
+                                                <span className="material-symbols-outlined !text-sm">text_fields</span>
+                                                Font Size
+                                            </span>
+                                            <span className="text-xs font-mono text-primary">{fontSize}px</span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="16"
+                                            max="72"
+                                            value={fontSize}
+                                            onChange={(e) => setFontSize(parseInt(e.target.value))}
+                                            className="w-full accent-primary bg-[#102216] h-1.5 rounded-lg appearance-none cursor-pointer"
+                                        />
+                                    </div>
+
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-sm font-medium text-[#9db9a6] flex items-center gap-2">
+                                                <span className="material-symbols-outlined !text-sm">speed</span>
+                                                Scroll Speed
+                                            </span>
+                                            <span className="text-xs font-mono text-primary">{scrollSpeed}%</span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="100"
+                                            value={scrollSpeed}
+                                            onChange={(e) => setScrollSpeed(parseInt(e.target.value))}
+                                            className="w-full accent-primary bg-[#102216] h-1.5 rounded-lg appearance-none cursor-pointer"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="bg-[#102216] rounded-xl p-8 border border-[#28392e] relative overflow-hidden h-[240px] flex flex-col items-center max-w-2xl mx-auto w-full">
+                                    <div className="absolute top-2 left-3 text-[10px] font-bold text-[#3b5443] tracking-widest uppercase z-10 bg-[#102216]/80 px-1 rounded">Live Preview</div>
+                                    <div
+                                        className="w-full transition-all duration-100 ease-linear flex flex-col items-center"
+                                        style={{
+                                            transform: `translateY(${-previewOffset}px)`,
+                                            paddingTop: '2rem'
+                                        }}
+                                    >
+                                        {paragraphs.length > 0 ? paragraphs.map((p, i) => (
+                                            <p
+                                                key={i}
+                                                className={cn(
+                                                    "transition-all duration-300",
+                                                    "text-white font-bold text-center leading-tight tracking-tight break-all"
+                                                )}
+                                                style={{ fontSize: `${fontSize}px` }}
+                                            >
+                                                {p}
+                                            </p>
+                                        )) : (
+                                            <p
+                                                className="text-white font-bold text-center leading-snug px-4 break-all"
+                                                style={{ fontSize: `${fontSize}px`, opacity: scrollSpeed > 0 ? 1 : 0.5 }}
+                                            >
+                                                {scriptText ? (scriptText.length > 100 ? scriptText.substring(0, 100) + "..." : scriptText) : "Your script will scroll here to test the speed..."}
+                                            </p>
+                                        )}
+                                    </div>
+                                    {scrollSpeed > 0 && (
+                                        <div className="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-[#102216] to-transparent z-10" />
+                                    )}
+                                    {scrollSpeed > 0 && (
+                                        <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[#102216] to-transparent z-10" />
+                                    )}
+                                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#13ec3b]/5 to-transparent pointer-events-none" />
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -289,17 +405,14 @@ function SetupContent() {
                                             <p className="text-sm font-bold text-white">Audio level</p>
                                             <span className="text-xs text-primary font-mono uppercase">OK</span>
                                         </div>
-                                        <div className="flex items-end justify-between h-8 gap-0.5 px-1 py-1 bg-[#102216] rounded-md border border-[#28392e]">
-                                            <div className="w-1 bg-primary/20 rounded-full h-[40%]"></div>
-                                            <div className="w-1 bg-primary/40 rounded-full h-[60%]"></div>
-                                            <div className="w-1 bg-primary/60 rounded-full h-[80%]"></div>
-                                            <div className="w-1 bg-primary rounded-full h-[50%] animate-pulse"></div>
-                                            <div className="w-1 bg-primary rounded-full h-[90%]"></div>
-                                            <div className="w-1 bg-primary/80 rounded-full h-[70%]"></div>
-                                            <div className="w-1 bg-primary/60 rounded-full h-[45%]"></div>
-                                            <div className="w-1 bg-primary/40 rounded-full h-[30%]"></div>
-                                            <div className="w-1 bg-primary/20 rounded-full h-[20%]"></div>
-                                            <div className="w-1 bg-primary/20 rounded-full h-[20%]"></div>
+                                        <div className="flex items-end h-8 w-full bg-transparent">
+                                            <AudioVisualizer
+                                                stream={activeStream}
+                                                width={160}
+                                                height={32}
+                                                isMuted={!micEnabled}
+                                                template="checklist"
+                                            />
                                         </div>
                                     </div>
                                 </div>

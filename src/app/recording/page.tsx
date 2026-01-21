@@ -31,7 +31,7 @@ function RecordingContent() {
     const isRecordingStarted = useRef(false);
 
     // Teleprompter Logic
-    const [teleprompterEnabled, setTeleprompterEnabled] = useState(true);
+    const [teleprompterEnabled, setTeleprompterEnabled] = useState(false);
     const [scriptText, setScriptText] = useState("");
     const [fontSize, setFontSize] = useState(30); // 1-100 range
     const [scrollSpeed, setScrollSpeed] = useState(40); // 1-100 range
@@ -45,6 +45,12 @@ function RecordingContent() {
 
         const savedEnabled = localStorage.getItem("reflektor_teleprompter_enabled");
         if (savedEnabled !== null) setTeleprompterEnabled(savedEnabled === "true");
+
+        const savedFontSize = localStorage.getItem("reflektor_teleprompter_font_size");
+        if (savedFontSize) setFontSize(parseInt(savedFontSize));
+
+        const savedScrollSpeed = localStorage.getItem("reflektor_teleprompter_scroll_speed");
+        if (savedScrollSpeed) setScrollSpeed(parseInt(savedScrollSpeed));
     }, []);
 
     useEffect(() => {
@@ -119,7 +125,7 @@ function RecordingContent() {
             </header>
 
             <main className="flex-1 flex flex-col items-center justify-center relative p-4 md:p-8 w-full max-w-[1400px] mx-auto">
-                <div className="relative w-full max-w-5xl aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/10 group">
+                <div className="relative w-full max-w-4xl aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/10 group">
                     <div className="absolute inset-0">
                         <CameraPreview
                             showOverlays={false}
@@ -136,7 +142,7 @@ function RecordingContent() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 pointer-events-none"></div>
 
                     {/* Teleprompter Overlay */}
-                    {teleprompterEnabled && (
+                    {(teleprompterEnabled && paragraphs.length > 0) && (
                         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl px-4 flex items-center gap-6 z-30">
                             <div className="flex flex-col items-center gap-2 shrink-0">
                                 <span className="material-symbols-outlined text-white/50 text-sm">text_fields</span>
@@ -163,9 +169,9 @@ function RecordingContent() {
                                             key={i}
                                             className={cn(
                                                 "transition-all duration-300",
-                                                "text-white font-bold leading-tight tracking-tight"
+                                                "text-white font-bold text-center leading-tight tracking-tight break-all"
                                             )}
-                                            style={{ fontSize: `${(fontSize / 100) * 2 + 1}rem` }}
+                                            style={{ fontSize: `${fontSize}px` }}
                                         >
                                             {p}
                                         </p>
