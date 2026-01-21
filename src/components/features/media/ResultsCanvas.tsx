@@ -65,12 +65,12 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
             }}
           >
             {/* Floating Feedback Pill */}
-            <div className="absolute -top-12 left-1/2 -translate-x-1/2 glass-pill flex items-center gap-2 whitespace-nowrap z-30">
+            <div className="absolute -top-16 left-1/2 -translate-x-1/2 glass-pill flex items-center justify-center gap-2 z-30 max-w-[90%] md:max-w-xs lg:max-w-sm">
               <span className={cn(
-                "size-2 rounded-full animate-pulse",
+                "size-2.5 rounded-full animate-pulse shrink-0",
                 isError ? "bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,1)]" : "bg-primary shadow-[0_0_8px_rgba(19,236,91,1)]"
               )}></span>
-              <span className="text-white text-[10px] font-bold uppercase tracking-widest feedback-shadow">
+              <span className="text-white text-[9px] md:text-[10px] font-bold uppercase tracking-widest feedback-shadow text-center leading-tight">
                 {event.description} {event.type === 'filler' && `(#${count})`}
               </span>
             </div>
