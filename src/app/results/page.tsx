@@ -666,7 +666,7 @@ export default function ResultsPage() {
                                                 }}>
                                                     <div className="flex items-center justify-between mb-1">
                                                         <span className={cn("text-xs font-bold", isWarning ? "text-yellow-500" : "text-primary")}>
-                                                            {formatTimeFull(event.start)}
+                                                            {formatTimeFull(Math.min(event.start, videoDuration))}
                                                         </span>
                                                         {isWarning && (
                                                             <span className="text-[10px] bg-yellow-500/20 text-yellow-500 px-1.5 rounded uppercase font-bold">Review</span>

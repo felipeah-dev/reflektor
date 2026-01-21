@@ -54,11 +54,13 @@ function RecordingContent() {
     }, []);
 
     useEffect(() => {
+        if (status !== 'recording') return;
+
         const interval = setInterval(() => {
             setSeconds((s) => s + 1);
         }, 1000);
         return () => clearInterval(interval);
-    }, []);
+    }, [status]);
 
     useEffect(() => {
         if (activeStream && !isRecordingStarted.current) {
