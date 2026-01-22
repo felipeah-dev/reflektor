@@ -28,7 +28,7 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
   };
 
   return (
-    <div className="relative w-full h-full rounded-xl overflow-hidden">
+    <div className="relative w-full h-full rounded-xl">
       {activeEvents.map((event, index) => {
         if (!event.box_2d || event.box_2d.length !== 4) return null;
 
@@ -64,13 +64,13 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
               height: `${height}%`,
             }}
           >
-            {/* Floating Feedback Pill */}
-            <div className="absolute -top-16 left-1/2 -translate-x-1/2 glass-pill flex items-center justify-center gap-2 z-30 max-w-[90%] md:max-w-xs lg:max-w-sm">
+            {/* Floating Feedback Pill - Optimized for long text */}
+            <div className="absolute -top-20 left-1/2 -translate-x-1/2 glass-pill flex items-center gap-3 z-30 w-max max-w-[280px] !rounded-2xl py-2.5 px-4">
               <span className={cn(
-                "size-2.5 rounded-full animate-pulse shrink-0",
+                "size-2 mr-1 rounded-full animate-pulse shrink-0",
                 isError ? "bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,1)]" : "bg-primary shadow-[0_0_8px_rgba(19,236,91,1)]"
               )}></span>
-              <span className="text-white text-[9px] md:text-[10px] font-bold uppercase tracking-widest feedback-shadow text-center leading-tight">
+              <span className="text-white text-[11px] font-bold uppercase tracking-wider feedback-shadow text-center leading-normal">
                 {event.description} {event.type === 'filler' && `(#${count})`}
               </span>
             </div>
