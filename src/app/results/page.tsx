@@ -43,32 +43,43 @@ export default function ResultsPage() {
     }, []);
 
     const exportWithAnnotations = async () => {
-        if (!videoRef.current || !session) return;
+        if (!session?.videoUrl) return;
 
         setIsExporting(true);
         setExportProgress(0);
 
-        const video = videoRef.current;
+        // 1. Create a separate, hidden video element for rendering
+        // This decouples the export process from the user's main player.
+        const hiddenVideo = document.createElement('video');
+        hiddenVideo.src = session.videoUrl;
+        hiddenVideo.crossOrigin = "anonymous";
+        hiddenVideo.muted = false; // Must be unmuted to capture audio
+        hiddenVideo.volume = 1.0;
+
+        // Wait for metadata to know resolution
+        await new Promise((resolve) => {
+            hiddenVideo.onloadedmetadata = resolve;
+        });
+
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        // Set resolution based on video source
-        const width = video.videoWidth || 1280;
-        const height = video.videoHeight || 720;
+        const width = hiddenVideo.videoWidth || 1280;
+        const height = hiddenVideo.videoHeight || 720;
         canvas.width = width;
         canvas.height = height;
-
-        // Calculate scaling factor based on a reference height (720px)
-        // to make overlays "responsive" to the video resolution.
         const scale = height / 720;
 
-        const stream = canvas.captureStream(30); // 30 FPS
+        const stream = canvas.captureStream(30);
 
-        // Add Audio
+        // 2. Setup Audio Capture properly
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        await audioContext.resume(); // Ensure it's active after user gesture
         const dest = audioContext.createMediaStreamDestination();
-        const source = audioContext.createMediaElementSource(video);
+        const source = audioContext.createMediaElementSource(hiddenVideo);
+
+        // Route audio to our recorder destination but NOT to the speakers
         source.connect(dest);
 
         const combinedStream = new MediaStream([
@@ -78,34 +89,41 @@ export default function ResultsPage() {
 
         const recorder = new MediaRecorder(combinedStream, {
             mimeType: 'video/webm;codecs=vp9',
-            videoBitsPerSecond: 8000000 // High quality
+            videoBitsPerSecond: 12000000 // Ultra high quality
         });
 
         const chunks: Blob[] = [];
+        recorder.ondataavailable = (e) => {
+            if (e.data.size > 0) chunks.push(e.data);
+        };
 
-        recorder.ondataavailable = (e) => chunks.push(e.data);
         recorder.onstop = () => {
             const blob = new Blob(chunks, { type: 'video/webm' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `reflektor-session-feedback-${Date.now()}.webm`;
+            a.download = `reflektor-feedback-${Date.now()}.webm`;
             a.click();
+
+            // Clean up
             setIsExporting(false);
             setExportProgress(0);
-            video.pause();
-            video.currentTime = 0;
-            video.muted = isMuted;
+            hiddenVideo.remove();
+            audioContext.close();
         };
 
-        const drawFrame = () => {
-            if (video.paused || video.ended) return;
+        // 3. Drawing Loop (tied to hidden video)
+        const renderLoop = () => {
+            if (hiddenVideo.ended) {
+                recorder.stop();
+                return;
+            }
 
-            // 1. Draw Video
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            // Draw current frame
+            ctx.drawImage(hiddenVideo, 0, 0, canvas.width, canvas.height);
 
-            // 2. Draw Annotations (Proportional to Resolution)
-            const currentTime = video.currentTime;
+            // Draw Overlays - EXACTLY MATCH PREVIEW DESIGN
+            const currentTime = hiddenVideo.currentTime;
             const events = session.analysis?.events || [];
             const activeEvents = events.filter((e: any) => currentTime >= e.start && currentTime <= e.end);
 
@@ -119,50 +137,38 @@ export default function ResultsPage() {
 
                 const isError = event.type === 'filler' ||
                     event.type === 'spatial_warning' ||
-                    event.type === 'pace_issue' ||
-                    event.severity === 'high' ||
-                    event.severity === 'medium';
+                    event.type === 'pace_issue';
                 const color = isError ? "#eab308" : "#13ec5b";
 
-                const count = events.filter((e: any) => e.type === event.type && e.start <= event.start).length;
-
-                // --- Draw Bounding Box ---
+                // --- Draw Bounding Box (rounded-3xl style) ---
                 ctx.beginPath();
-                const boxRadius = 24 * scale;
-                ctx.moveTo(x + boxRadius, y);
-                ctx.lineTo(x + w - boxRadius, y);
-                ctx.quadraticCurveTo(x + w, y, x + w, y + boxRadius);
-                ctx.lineTo(x + w, y + h - boxRadius);
-                ctx.quadraticCurveTo(x + w, y + h, x + w - boxRadius, y + h);
-                ctx.lineTo(x + boxRadius, y + h);
-                ctx.quadraticCurveTo(x, y + h, x, y + h - boxRadius);
-                ctx.lineTo(x, y + boxRadius);
-                ctx.quadraticCurveTo(x, y, x + boxRadius, y);
-                ctx.closePath();
-
-                ctx.strokeStyle = `${color}88`; // slightly more opaque
-                ctx.lineWidth = 2 * scale;
+                const boxRadius = 32 * scale; // Proportional to rounded-3xl
+                ctx.roundRect(x, y, w, h, boxRadius);
+                ctx.strokeStyle = isError ? "rgba(234, 179, 8, 0.4)" : "rgba(19, 236, 91, 0.6)";
+                ctx.lineWidth = 3 * scale;
                 ctx.stroke();
 
-                // --- Draw Feedback Pill with Wrapping ---
+                // --- Draw Feedback Pill with wrapping logic ---
+                const count = events.filter((e: any) => e.type === event.type && e.start <= event.start).length;
                 const labelText = `${event.description}${event.type === 'filler' ? ` (#${count})` : ''}`.toUpperCase();
 
-                const fontSize = Math.max(10, 12 * scale);
+                const fontSize = Math.max(11, 13 * scale);
                 ctx.font = `bold ${fontSize}px 'Space Grotesk', sans-serif`;
-                ctx.letterSpacing = `${2 * scale}px`;
 
-                const pillPadding = 18 * scale;
-                const dotSpace = 34 * scale;
-                const maxTextWidth = canvas.width * 0.85;
+                const maxPillWidth = 350 * scale;
+                const pillPaddingX = 22 * scale;
+                const pillPaddingY = 14 * scale;
+                const lineSpacing = 4 * scale;
 
-                // Text Wrapping
+                // Text wrapping logic for Canvas
                 const words = labelText.split(' ');
                 const lines: string[] = [];
                 let currentLine = words[0];
 
                 for (let i = 1; i < words.length; i++) {
-                    const testLine = currentLine + ' ' + words[i];
-                    if (ctx.measureText(testLine).width > maxTextWidth - dotSpace) {
+                    const testLine = currentLine + " " + words[i];
+                    const metrics = ctx.measureText(testLine);
+                    if (metrics.width > (maxPillWidth - (pillPaddingX * 3))) {
                         lines.push(currentLine);
                         currentLine = words[i];
                     } else {
@@ -171,72 +177,68 @@ export default function ResultsPage() {
                 }
                 lines.push(currentLine);
 
-                const lineHeights = fontSize * 1.4;
-                const longestLineWidth = lines.reduce((max, l) => Math.max(max, ctx.measureText(l).width), 0);
-                const pillWidth = longestLineWidth + pillPadding + dotSpace;
-                const pillHeight = (lines.length * lineHeights) + (pillPadding * 1.5);
+                // Calculate vertical size
+                const textHeight = (lines.length * fontSize) + ((lines.length - 1) * lineSpacing);
+                const pillHeight = textHeight + (pillPaddingY * 2);
 
-                let pillX = x + (w / 2) - (pillWidth / 2);
-                pillX = Math.max(15 * scale, Math.min(canvas.width - pillWidth - 15 * scale, pillX));
-                const pillY = y - (pillHeight + 10 * scale);
+                // Calculate horizontal size based on longest line
+                const maxLineWidth = lines.reduce((max, line) => Math.max(max, ctx.measureText(line).width), 0);
+                const pillWidth = maxLineWidth + (pillPaddingX * 3);
 
-                // Background
+                const pillX = Math.max(10, Math.min(canvas.width - pillWidth - 10, x + (w / 2) - (pillWidth / 2)));
+                const pillY = y - pillHeight - (20 * scale);
+
+                // Draw Background Pill (glass-pill style)
                 ctx.beginPath();
-                const pr = lines.length > 1 ? 12 * scale : pillHeight / 2;
-                ctx.moveTo(pillX + pr, pillY);
-                ctx.lineTo(pillX + pillWidth - pr, pillY);
-                ctx.quadraticCurveTo(pillX + pillWidth, pillY, pillX + pillWidth, pillY + pr);
-                ctx.lineTo(pillX + pillWidth, pillY + pillHeight - pr);
-                ctx.quadraticCurveTo(pillX + pillWidth, pillY + pillHeight, pillX + pillWidth - pr, pillY + pillHeight);
-                ctx.lineTo(pillX + pr, pillY + pillHeight);
-                ctx.quadraticCurveTo(pillX, pillY + pillHeight, pillX, pillY + pillHeight - pr);
-                ctx.lineTo(pillX, pillY + pr);
-                ctx.quadraticCurveTo(pillX, pillY, pillX + pr, pillY);
-                ctx.closePath();
-
-                ctx.fillStyle = "rgba(10, 20, 15, 0.95)";
+                const radius = lines.length > 1 ? 16 * scale : pillHeight / 2;
+                ctx.roundRect(pillX, pillY, pillWidth, pillHeight, radius);
+                ctx.fillStyle = "rgba(10, 20, 15, 0.95)"; // Darker for better contrast in export
                 ctx.fill();
                 ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
                 ctx.lineWidth = 1 * scale;
                 ctx.stroke();
 
-                // Dot (aligned with first line)
-                const dotX = pillX + 18 * scale;
-                const firstLineY = pillY + (pillPadding * 1.1) + (fontSize / 2);
+                // Draw status indicator (dot) aligned with the first line
+                const dotSize = 4 * scale;
+                const dotX = pillX + pillPaddingX;
+                const dotY = pillY + pillPaddingY + (fontSize / 2);
                 ctx.beginPath();
-                ctx.arc(dotX, firstLineY, 4 * scale, 0, Math.PI * 2);
+                ctx.arc(dotX, dotY, dotSize, 0, Math.PI * 2);
                 ctx.fillStyle = color;
-                ctx.shadowBlur = 8 * scale;
+                ctx.shadowBlur = 10 * scale;
                 ctx.shadowColor = color;
                 ctx.fill();
                 ctx.shadowBlur = 0;
 
-                // Lines
-                ctx.fillStyle = "#ffffff";
-                lines.forEach((l, idx) => {
-                    ctx.fillText(l, dotX + 16 * scale, firstLineY + (idx * lineHeights) + (fontSize * 0.3));
+                // Draw multi-line text
+                ctx.fillStyle = "white";
+                ctx.textAlign = "left";
+                lines.forEach((line, index) => {
+                    const lineY = pillY + pillPaddingY + (index * (fontSize + lineSpacing)) + (fontSize * 0.82);
+                    ctx.fillText(line, dotX + (dotSize * 3), lineY);
                 });
-                ctx.letterSpacing = "0px";
+                ctx.textAlign = "left"; // Reset for next items
             });
 
-            setExportProgress((video.currentTime / video.duration) * 100);
-            if (!video.ended) requestAnimationFrame(drawFrame);
+            if (!hiddenVideo.paused && !hiddenVideo.ended) {
+                requestAnimationFrame(renderLoop);
+            }
         };
 
-        // Standard Speed Mode
-        video.currentTime = 0;
-        video.playbackRate = 1.0;
-        video.muted = true; // Use true for silent, or false if audio is needed. 
-        // Note: combinedStream already contains audio tracks.
+        // Track progress via ontimeupdate for smoother values
+        hiddenVideo.ontimeupdate = () => {
+            if (hiddenVideo.duration > 0) {
+                setExportProgress((hiddenVideo.currentTime / hiddenVideo.duration) * 100);
+            }
+        };
 
-        video.play();
+        // Start hidden process
+        hiddenVideo.play();
         recorder.start();
-        drawFrame();
-
-        video.onended = () => {
-            recorder.stop();
-        };
+        renderLoop();
     };
+
+
 
     const updateProgress = () => {
         if (videoRef.current) {
