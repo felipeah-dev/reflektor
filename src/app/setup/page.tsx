@@ -277,42 +277,28 @@ function SetupContent() {
                                     </div>
                                 </div>
 
-                                <div className="bg-[#102216] rounded-xl p-8 border border-[#28392e] relative overflow-hidden h-[240px] flex flex-col items-center max-w-2xl mx-auto w-full">
-                                    <div className="absolute top-2 left-3 text-[10px] font-bold text-[#3b5443] tracking-widest uppercase z-10 bg-[#102216]/80 px-1 rounded">Live Preview</div>
+                                <div className="bg-[#102216] rounded-2xl p-8 border border-[#28392e] relative overflow-hidden h-[300px] flex flex-col items-center max-w-2xl mx-auto w-full group/tele shadow-inner">
+                                    <div className="absolute top-2 left-3 text-[10px] font-bold text-primary/40 tracking-widest uppercase z-10 bg-[#102216]/80 px-2 py-0.5 rounded-full border border-primary/10">Live Preview</div>
+
+                                    {/* Top and Bottom Fades - EXACT MATCH */}
+                                    <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-[#102216] to-transparent z-10 pointer-events-none" />
+                                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#102216] to-transparent z-10 pointer-events-none" />
+
                                     <div
-                                        className="w-full transition-all duration-100 ease-linear flex flex-col items-center"
+                                        className="w-full transition-all duration-100 ease-linear py-24 text-white font-bold text-center leading-[1.3] tracking-tight whitespace-pre-wrap"
                                         style={{
                                             transform: `translateY(${-previewOffset}px)`,
-                                            paddingTop: '2rem'
+                                            fontSize: `${fontSize}px`,
+                                            textShadow: '0 2px 8px rgba(0,0,0,0.0)'
                                         }}
                                     >
-                                        {paragraphs.length > 0 ? paragraphs.map((p, i) => (
-                                            <p
-                                                key={i}
-                                                className={cn(
-                                                    "transition-all duration-300",
-                                                    "text-white font-bold text-center leading-tight tracking-tight break-all"
-                                                )}
-                                                style={{ fontSize: `${fontSize}px` }}
-                                            >
-                                                {p}
-                                            </p>
-                                        )) : (
-                                            <p
-                                                className="text-white font-bold text-center leading-snug px-4 break-all"
-                                                style={{ fontSize: `${fontSize}px`, opacity: scrollSpeed > 0 ? 1 : 0.5 }}
-                                            >
-                                                {scriptText ? (scriptText.length > 100 ? scriptText.substring(0, 100) + "..." : scriptText) : "Your script will scroll here to test the speed..."}
-                                            </p>
-                                        )}
+                                        {scriptText || "Escribe tu guion arriba para verlo aquí..."}
                                     </div>
-                                    {scrollSpeed > 0 && (
-                                        <div className="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-[#102216] to-transparent z-10" />
-                                    )}
-                                    {scrollSpeed > 0 && (
-                                        <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[#102216] to-transparent z-10" />
-                                    )}
-                                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#13ec3b]/5 to-transparent pointer-events-none" />
+
+                                    {/* Reading Indicator Line - EXACT MATCH */}
+                                    <div className="absolute top-1/2 left-0 w-1.5 h-10 bg-primary -translate-y-1/2 rounded-r-full shadow-[0_0_15px_rgba(19,236,91,0.4)] z-20"></div>
+
+                                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#13ec3b]/2 to-transparent pointer-events-none" />
                                 </div>
                             </div>
                         )}

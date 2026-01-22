@@ -143,59 +143,22 @@ function RecordingContent() {
 
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 pointer-events-none"></div>
 
-                    {/* Teleprompter Overlay */}
-                    {(teleprompterEnabled && paragraphs.length > 0) && (
-                        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl px-4 flex items-center gap-6 z-30">
-                            <div className="flex flex-col items-center gap-2 shrink-0">
-                                <span className="material-symbols-outlined text-white/50 text-sm">text_fields</span>
-                                <input
-                                    type="range"
-                                    min="1"
-                                    max="100"
-                                    value={fontSize}
-                                    onChange={(e) => setFontSize(parseInt(e.target.value))}
-                                    className="accent-primary h-24"
-                                    style={{ writingMode: "vertical-lr", appearance: "slider-vertical" } as any}
-                                />
-                                <span className="text-[10px] text-white/50 uppercase font-bold">Size</span>
-                            </div>
-
-                            <div className="flex-1 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8 shadow-2xl relative overflow-hidden h-[240px]">
+                    {/* Teleprompter Overlay - Proposal Design Match */}
+                    {(teleprompterEnabled && scriptText) && (
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl px-4 z-30">
+                            <div className="relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8 shadow-2xl overflow-hidden group/tele">
                                 <div
                                     ref={scrollRef}
-                                    className="space-y-6 text-center transition-transform duration-100 ease-linear"
-                                    style={{ transform: `translateY(-${scrollOffset}px)` }}
+                                    className="transition-transform duration-100 ease-linear py-32 text-white font-bold text-center leading-tight tracking-tight whitespace-pre-wrap scale-[1.02]"
+                                    style={{
+                                        transform: `translateY(-${scrollOffset}px)`,
+                                        fontSize: `${fontSize}px`,
+                                    }}
                                 >
-                                    {paragraphs.length > 0 ? paragraphs.map((p, i) => (
-                                        <p
-                                            key={i}
-                                            className={cn(
-                                                "transition-all duration-300",
-                                                "text-white font-bold text-center leading-tight tracking-tight break-all"
-                                            )}
-                                            style={{ fontSize: `${fontSize}px` }}
-                                        >
-                                            {p}
-                                        </p>
-                                    )) : (
-                                        <p className="text-white/30 text-xl italic font-medium">No script provided in setup...</p>
-                                    )}
+                                    {scriptText}
                                 </div>
+                                {/* Bottom Accent Line from Proposal */}
                                 <div className="absolute bottom-0 left-0 h-1 bg-primary/40 w-1/3"></div>
-                            </div>
-
-                            <div className="flex flex-col items-center gap-2 shrink-0">
-                                <span className="material-symbols-outlined text-white/50 text-sm">speed</span>
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max="100"
-                                    value={scrollSpeed}
-                                    onChange={(e) => setScrollSpeed(parseInt(e.target.value))}
-                                    className="accent-primary h-24"
-                                    style={{ writingMode: "vertical-lr", appearance: "slider-vertical" } as any}
-                                />
-                                <span className="text-[10px] text-white/50 uppercase font-bold">Speed</span>
                             </div>
                         </div>
                     )}
@@ -280,8 +243,8 @@ function RecordingContent() {
                 <p className="mt-6 text-sm text-gray-500 dark:text-gray-400 font-medium opacity-80 animate-pulse">
                     Maintain eye contact with the camera while reading.
                 </p>
-            </main>
-        </div>
+            </main >
+        </div >
     );
 }
 
