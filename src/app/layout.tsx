@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { SplashScreen } from "@/components/ui/SplashScreen";
 
 const baseUrl = "https://reflektor.vercel.app";
 
@@ -58,6 +59,7 @@ export default function RootLayout({
       <body
         className={`font-display antialiased min-h-screen flex flex-col overflow-x-hidden bg-background-light dark:bg-background-dark text-slate-900 dark:text-white selection:bg-primary selection:text-background-dark`}
       >
+        <SplashScreen />
         {children}
       </body>
     </html>
