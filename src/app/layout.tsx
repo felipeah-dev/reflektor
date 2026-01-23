@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://reflektor.ai");
+const baseUrl = "https://reflektor.vercel.app";
 
 export const metadata: Metadata = {
   title: "REFLEKTOR AI | Advanced Public Speaking Coach",
