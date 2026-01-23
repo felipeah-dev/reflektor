@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     siteName: "Reflektor AI",
     images: [
       {
-        url: `${baseUrl}/og-image.png`,
+        url: "/og-image.png",
         width: 1200,
         height: 630,
         alt: "Reflektor AI Dashboard Preview",
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "REFLEKTOR AI | Public Speaking Coach",
     description: "Master your communication with real-time AI feedback.",
-    images: [`${baseUrl}/og-image.png`],
+    images: ["/og-image.png"],
   },
 };
 
