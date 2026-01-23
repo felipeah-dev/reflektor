@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
             allow: '/',
             disallow: ['/api/', '/api/gemini/token'],
         },
-        sitemap: 'https://reflektor.ai/sitemap.xml',
+        sitemap: `${process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://reflektor.ai')}/sitemap.xml`,
     }
 }

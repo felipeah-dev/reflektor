@@ -143,22 +143,35 @@ function RecordingContent() {
 
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 pointer-events-none"></div>
 
-                    {/* Teleprompter Overlay - Proposal Design Match */}
-                    {(teleprompterEnabled && scriptText) && (
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl px-4 z-30">
-                            <div className="relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8 shadow-2xl overflow-hidden group/tele">
+                    {/* Teleprompter Overlay - Clean & Legible */}
+                    {(teleprompterEnabled && paragraphs.length > 0) && (
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-3xl px-8 z-30">
+                            <div className="relative bg-black/40 backdrop-blur-2xl border border-white/20 rounded-3xl p-10 shadow-[0_0_50px_rgba(0,0,0,0.5)] h-[320px] overflow-hidden group/tele">
+                                {/* Top and Bottom Fades for smoother reading */}
+                                <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/60 to-transparent z-10 pointer-events-none"></div>
+                                <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/60 to-transparent z-10 pointer-events-none"></div>
+
                                 <div
                                     ref={scrollRef}
-                                    className="transition-transform duration-100 ease-linear py-32 text-white font-bold text-center leading-tight tracking-tight whitespace-pre-wrap scale-[1.02]"
-                                    style={{
-                                        transform: `translateY(-${scrollOffset}px)`,
-                                        fontSize: `${fontSize}px`,
-                                    }}
+                                    className="space-y-4 transition-transform duration-100 ease-linear py-12"
+                                    style={{ transform: `translateY(-${scrollOffset}px)` }}
                                 >
-                                    {scriptText}
+                                    {paragraphs.map((p, i) => (
+                                        <p
+                                            key={i}
+                                            className={cn(
+                                                "text-white font-bold text-center leading-[1.3] tracking-tight",
+                                                "drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]"
+                                            )}
+                                            style={{ fontSize: `${fontSize}px` }}
+                                        >
+                                            {p}
+                                        </p>
+                                    ))}
                                 </div>
-                                {/* Bottom Accent Line from Proposal */}
-                                <div className="absolute bottom-0 left-0 h-1 bg-primary/40 w-1/3"></div>
+
+                                {/* Reading Indicator Line */}
+                                <div className="absolute top-1/2 left-0 w-1.5 h-12 bg-primary -translate-y-1/2 rounded-r-full shadow-[0_0_15px_rgba(19,236,91,0.5)]"></div>
                             </div>
                         </div>
                     )}

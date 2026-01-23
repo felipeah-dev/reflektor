@@ -7,14 +7,17 @@ export const metadata: Metadata = {
   keywords: ["public speaking", "AI coach", "soft skills", "communication training", "speech analysis"],
   authors: [{ name: "REFLEKTOR Team" }],
   creator: "REFLEKTOR AI",
-  metadataBase: new URL("https://reflektor.ai"), // Placeholder URL for canonicals
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://reflektor.ai")
+  ),
   alternates: {
     canonical: "/",
   },
   openGraph: {
     title: "REFLEKTOR AI | Professional Public Speaking Coach",
     description: "Analyze your presentation and master your communication skills with real-time AI feedback.",
-    url: "https://reflektor.ai",
+    url: "./",
     siteName: "Reflektor AI",
     images: [
       {
