@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://reflektor.ai");
+
 export const metadata: Metadata = {
   title: "REFLEKTOR AI | Advanced Public Speaking Coach",
   description: "Master your communication with AI-powered feedback. Analyze gestures, eye contact, and filler words in real-time.",
   keywords: ["public speaking", "AI coach", "soft skills", "communication training", "speech analysis"],
   authors: [{ name: "REFLEKTOR Team" }],
   creator: "REFLEKTOR AI",
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://reflektor.ai")
-  ),
+  metadataBase: new URL(baseUrl),
   alternates: {
     canonical: "/",
   },
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     siteName: "Reflektor AI",
     images: [
       {
-        url: "/og-image.png", // Should be created or provided
+        url: `${baseUrl}/og-image.png`,
         width: 1200,
         height: 630,
         alt: "Reflektor AI Dashboard Preview",
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "REFLEKTOR AI | Public Speaking Coach",
     description: "Master your communication with real-time AI feedback.",
-    images: ["/og-image.png"],
+    images: [`${baseUrl}/og-image.png`],
   },
 };
 
