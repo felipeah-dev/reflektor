@@ -44,6 +44,14 @@ export function CameraPreview({
 
     async function startCamera() {
         if (isInitializingRef.current) return;
+
+        if (typeof navigator === 'undefined' || !navigator.mediaDevices) {
+            setErrorName("NotSupported");
+            setPermissionError(true);
+            onPermissionChange?.(false);
+            return;
+        }
+
         isInitializingRef.current = true;
 
         setErrorName(null);

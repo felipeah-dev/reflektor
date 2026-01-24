@@ -34,25 +34,33 @@ function SetupContent() {
     const isReady = hasCameraPermission === true && hasMicPermission === true;
 
     useEffect(() => {
-        // Load persist script
-        const savedScript = localStorage.getItem("reflektor_script");
-        if (savedScript) setScriptText(savedScript);
+        try {
+            // Load persist script
+            const savedScript = localStorage.getItem("reflektor_script");
+            if (savedScript) setScriptText(savedScript);
 
-        const savedPromptEnabled = localStorage.getItem("reflektor_teleprompter_enabled");
-        if (savedPromptEnabled !== null) setTeleprompterEnabled(savedPromptEnabled === "true");
+            const savedPromptEnabled = localStorage.getItem("reflektor_teleprompter_enabled");
+            if (savedPromptEnabled !== null) setTeleprompterEnabled(savedPromptEnabled === "true");
 
-        const savedFontSize = localStorage.getItem("reflektor_teleprompter_font_size");
-        if (savedFontSize) setFontSize(parseInt(savedFontSize));
+            const savedFontSize = localStorage.getItem("reflektor_teleprompter_font_size");
+            if (savedFontSize) setFontSize(parseInt(savedFontSize));
 
-        const savedScrollSpeed = localStorage.getItem("reflektor_teleprompter_scroll_speed");
-        if (savedScrollSpeed) setScrollSpeed(parseInt(savedScrollSpeed));
+            const savedScrollSpeed = localStorage.getItem("reflektor_teleprompter_scroll_speed");
+            if (savedScrollSpeed) setScrollSpeed(parseInt(savedScrollSpeed));
+        } catch (e) {
+            console.warn("Storage access failed:", e);
+        }
     }, []);
 
     useEffect(() => {
-        localStorage.setItem("reflektor_script", scriptText);
-        localStorage.setItem("reflektor_teleprompter_enabled", teleprompterEnabled.toString());
-        localStorage.setItem("reflektor_teleprompter_font_size", fontSize.toString());
-        localStorage.setItem("reflektor_teleprompter_scroll_speed", scrollSpeed.toString());
+        try {
+            localStorage.setItem("reflektor_script", scriptText);
+            localStorage.setItem("reflektor_teleprompter_enabled", teleprompterEnabled.toString());
+            localStorage.setItem("reflektor_teleprompter_font_size", fontSize.toString());
+            localStorage.setItem("reflektor_teleprompter_scroll_speed", scrollSpeed.toString());
+        } catch (e) {
+            // Silently fail, user just won't have persistence
+        }
     }, [scriptText, teleprompterEnabled, fontSize, scrollSpeed]);
 
     const restartPreview = () => setPreviewOffset(0);
@@ -74,7 +82,7 @@ function SetupContent() {
     }, [teleprompterEnabled, scrollSpeed]);
 
     useEffect(() => {
-        if (hasCameraPermission || hasMicPermission) {
+        if ((hasCameraPermission || hasMicPermission) && typeof navigator !== 'undefined' && navigator.mediaDevices) {
             navigator.mediaDevices.enumerateDevices().then(devices => {
                 const video = devices.filter(d => d.kind === "videoinput");
                 const audio = devices.filter(d => d.kind === "audioinput");
@@ -83,9 +91,11 @@ function SetupContent() {
 
                 if (!selectedVideoId && video.length > 0) setSelectedVideoId(video[0].deviceId);
                 if (!selectedAudioId && audio.length > 0) setSelectedAudioId(audio[0].deviceId);
+            }).catch(err => {
+                console.error("enumerateDevices failed:", err);
             });
         }
-    }, [hasCameraPermission, hasMicPermission]);
+    }, [hasCameraPermission, hasMicPermission, selectedVideoId, selectedAudioId]);
 
     const estimatedTime = () => {
         // Simple heuristic: 130 words per minute
@@ -208,6 +218,10 @@ function SetupContent() {
                                     <button
                                         onClick={async () => {
                                             try {
+                                                if (!navigator.clipboard) {
+                                                    alert("Tu navegador no permite acceder al portapapeles automáticamente.");
+                                                    return;
+                                                }
                                                 const text = await navigator.clipboard.readText();
                                                 setScriptText(text);
                                             } catch (err) {

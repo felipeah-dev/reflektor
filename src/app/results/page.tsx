@@ -144,7 +144,11 @@ export default function ResultsPage() {
                 // --- Draw Bounding Box (rounded-3xl style) ---
                 ctx.beginPath();
                 const boxRadius = 32 * scale; // Proportional to rounded-3xl
-                ctx.roundRect(x, y, w, h, boxRadius);
+                if (ctx.roundRect) {
+                    ctx.roundRect(x, y, w, h, boxRadius);
+                } else {
+                    ctx.rect(x, y, w, h);
+                }
                 ctx.strokeStyle = isError ? "rgba(234, 179, 8, 0.4)" : "rgba(19, 236, 91, 0.6)";
                 ctx.lineWidth = 3 * scale;
                 ctx.stroke();
@@ -192,7 +196,11 @@ export default function ResultsPage() {
                 // Draw Background Pill (glass-pill style)
                 ctx.beginPath();
                 const radius = lines.length > 1 ? 16 * scale : pillHeight / 2;
-                ctx.roundRect(pillX, pillY, pillWidth, pillHeight, radius);
+                if (ctx.roundRect) {
+                    ctx.roundRect(pillX, pillY, pillWidth, pillHeight, radius);
+                } else {
+                    ctx.rect(pillX, pillY, pillWidth, pillHeight);
+                }
                 ctx.fillStyle = "rgba(10, 20, 15, 0.95)"; // Darker for better contrast in export
                 ctx.fill();
                 ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";

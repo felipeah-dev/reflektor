@@ -90,7 +90,12 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
 
                     const y = height - barHeight;
                     ctx.beginPath();
-                    ctx.roundRect(startX, y, barWidth, barHeight, barWidth / 2);
+                    if (ctx.roundRect) {
+                        ctx.roundRect(startX, y, barWidth, barHeight, barWidth / 2);
+                    } else {
+                        // Fallback for older browsers
+                        ctx.rect(startX, y, barWidth, barHeight);
+                    }
                     ctx.fill();
 
                     startX += barWidth + gap;
@@ -106,7 +111,12 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
                     const radius = barWidth / 2;
                     const y = height - barHeight;
                     ctx.beginPath();
-                    ctx.roundRect(x, y, barWidth - 2, barHeight, radius);
+                    if (ctx.roundRect) {
+                        ctx.roundRect(x, y, barWidth - 2, barHeight, radius);
+                    } else {
+                        // Fallback for older browsers
+                        ctx.rect(x, y, barWidth - 2, barHeight);
+                    }
                     ctx.fill();
                     x += barWidth + 1;
                 }
