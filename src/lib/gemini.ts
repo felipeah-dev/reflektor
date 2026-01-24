@@ -173,15 +173,30 @@ export async function analyzeVideo(videoBlob: Blob, onStatusUpdate: (msg: string
     ✗ Generic feedback like "improve eye contact" without context
     ✗ Marking brief, natural pauses as problems`;
 
-        onStatusUpdate("Preparing video for analysis...");
-
         // Convert Blob to Base64 (Proof of concept for Hackathon - for larger files, use Files API)
-        const base64Video = await new Promise<string>((resolve) => {
+        const base64Video = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => {
-                const base64 = (reader.result as string).split(',')[1];
-                resolve(base64);
+                const result = reader.result as string;
+                // Find the index of the base64 data start
+                // Data URLs format: "data:[<mediatype>][;base64],<data>"
+                // Some mediatypes (like video/webm;codecs=vp9,opus) contain commas.
+                // The base64 data is always after the LAST comma before the data itself.
+                const base64Marker = ";base64,";
+                const index = result.indexOf(base64Marker);
+                if (index !== -1) {
+                    resolve(result.substring(index + base64Marker.length));
+                } else {
+                    // Fallback to simpler split if marker not found
+                    const lastComma = result.lastIndexOf(',');
+                    if (lastComma !== -1) {
+                        resolve(result.substring(lastComma + 1));
+                    } else {
+                        reject(new Error("Failed to parse base64 data from video blob"));
+                    }
+                }
             };
+            reader.onerror = () => reject(new Error("FileReader error"));
             reader.readAsDataURL(videoBlob);
         });
 
@@ -223,9 +238,9 @@ export async function analyzeVideo(videoBlob: Blob, onStatusUpdate: (msg: string
                     onStatusUpdate(`Model is busy (503). Retrying in ${waitTime / 1000}s... (Attempt ${retryCount}/${MAX_RETRIES})`);
                     await new Promise(resolve => setTimeout(resolve, waitTime));
 
-                    // On last retry, try gemini-1.5-flash as fallback for stability
+                    // On last retry, try gemini-1.5-flash-latest as fallback for stability
                     if (retryCount === MAX_RETRIES - 1) {
-                        modelName = "gemini-1.5-flash";
+                        modelName = "gemini-1.5-flash-latest";
                         onStatusUpdate("Switching to fallback model (stability mode)...");
                     }
                 } else {

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import ResultsCanvas from "@/components/features/media/ResultsCanvas";
 import { Logo } from "@/components/ui/Logo";
 import { cn } from "@/lib/utils";
+import { ChatCoach } from "@/components/features/media/ChatCoach";
 
 import { sessionStore } from "@/lib/sessionStore";
 
@@ -731,6 +732,9 @@ export default function ResultsPage() {
                         <span className="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
                     </button>
                 </div>
+
+                {/* AI Coaching Chatbot */}
+                {session && <ChatCoach sessionData={session} />}
             </main>
         </div>
     );
