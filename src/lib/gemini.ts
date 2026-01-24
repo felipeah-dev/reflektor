@@ -200,9 +200,9 @@ export async function analyzeVideo(videoBlob: Blob, onStatusUpdate: (msg: string
             reader.readAsDataURL(videoBlob);
         });
 
-        onStatusUpdate("Analyzing multimodal data with Gemini 3...");
+        onStatusUpdate("Analyzing multimodal data with Gemini 3 Pro...");
 
-        let modelName = "gemini-3-flash-preview";
+        let modelName = "gemini-3-pro-preview";
         let result;
         let retryCount = 0;
         const MAX_RETRIES = 3;
