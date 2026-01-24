@@ -200,9 +200,9 @@ export async function analyzeVideo(videoBlob: Blob, onStatusUpdate: (msg: string
             reader.readAsDataURL(videoBlob);
         });
 
-        onStatusUpdate("Analyzing multimodal data with Gemini 3 Pro...");
+        onStatusUpdate("Analyzing multimodal data with Gemini 3 Flash...");
 
-        let modelName = "gemini-3-pro-preview";
+        let modelName = "gemini-3-flash-preview";
         let result;
         let retryCount = 0;
         const MAX_RETRIES = 3;
@@ -231,17 +231,17 @@ export async function analyzeVideo(videoBlob: Blob, onStatusUpdate: (msg: string
                 break; // If successful, exit the loop
             } catch (error: any) {
                 retryCount++;
-                const isOverloaded = error.message?.includes("503") || error.message?.includes("overloaded");
+                const isOverloaded = error.message?.includes("503") || error.message?.includes("overloaded") || error.message?.includes("429");
 
                 if (isOverloaded && retryCount < MAX_RETRIES) {
                     const waitTime = Math.pow(2, retryCount) * 2000;
-                    onStatusUpdate(`Model is busy (503). Retrying in ${waitTime / 1000}s... (Attempt ${retryCount}/${MAX_RETRIES})`);
+                    onStatusUpdate(`Model busy or quota reached. Retrying in ${waitTime / 1000}s... (Attempt ${retryCount}/${MAX_RETRIES})`);
                     await new Promise(resolve => setTimeout(resolve, waitTime));
 
-                    // On last retry, try gemini-1.5-flash-latest as fallback for stability
+                    // On last retry, try gemini-2.5-flash-latest as fallback for stability
                     if (retryCount === MAX_RETRIES - 1) {
-                        modelName = "gemini-1.5-flash-latest";
-                        onStatusUpdate("Switching to fallback model (stability mode)...");
+                        modelName = "gemini-2.5-flash-latest";
+                        onStatusUpdate("Switching to Gemini 2.5 fallback (stability mode)...");
                     }
                 } else {
                     console.error("Gemini Critical Error:", error);
