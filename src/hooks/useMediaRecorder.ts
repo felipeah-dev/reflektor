@@ -10,9 +10,18 @@ export function useMediaRecorder() {
         if (!stream) return;
 
         chunksRef.current = [];
-        const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
-            ? 'video/webm;codecs=vp9,opus'
-            : 'video/webm';
+        const mimeType = [
+            'video/webm;codecs=vp9,opus',
+            'video/webm;codecs=vp8,opus',
+            'video/webm',
+            'video/mp4',
+            'video/quicktime'
+        ].find(type => MediaRecorder.isTypeSupported(type));
+
+        if (!mimeType) {
+            console.error("No supported MediaRecorder mimeTypes found");
+            return;
+        }
 
         const recorder = new MediaRecorder(stream, { mimeType });
 
@@ -24,7 +33,7 @@ export function useMediaRecorder() {
         };
 
         recorder.onstop = () => {
-            const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+            const blob = new Blob(chunksRef.current, { type: mimeType });
             setRecordedBlob(blob);
             setStatus('stopped');
         };

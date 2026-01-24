@@ -54,7 +54,9 @@ export function CameraPreview({
         // Step 1: Try to get both together
         try {
             const constraints: MediaStreamConstraints = {
-                video: videoDeviceId ? { deviceId: { exact: videoDeviceId } } : true,
+                video: videoDeviceId
+                    ? { deviceId: { exact: videoDeviceId } }
+                    : { facingMode: "user" }, // Use front camera by default on mobile
                 audio: audioDeviceId ? { deviceId: { exact: audioDeviceId } } : true
             };
             stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -67,15 +69,17 @@ export function CameraPreview({
 
             // Step 2: Probe Video
             try {
-                const videoConstraints = videoDeviceId ? { deviceId: { exact: videoDeviceId } } : true;
+                // Try with ideal deviceId instead of exact if first try failed, or facingMode
+                const videoConstraints = videoDeviceId
+                    ? { deviceId: videoDeviceId }
+                    : { facingMode: "user" };
                 const videoStream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
                 stream = videoStream;
                 videoOk = true;
             } catch (vErr: any) {
-
                 console.error("Video probe failed:", vErr);
                 videoOk = false;
-                setErrorName(vErr.name); // Set it here if video fails
+                setErrorName(vErr.name);
             }
 
             // Small delay to let the browser settle after a potential denial
@@ -105,6 +109,8 @@ export function CameraPreview({
             activeStreamRef.current = stream;
             if (videoRef.current) {
                 videoRef.current.srcObject = stream;
+                // Important for mobile browsers (iOS/Chrome Android)
+                videoRef.current.play().catch(e => console.error("Video play failed:", e));
             }
 
             stream.getTracks().forEach(track => {
@@ -184,6 +190,7 @@ export function CameraPreview({
                 activeStreamRef.current = updatedStream;
                 if (videoRef.current) {
                     videoRef.current.srcObject = updatedStream;
+                    videoRef.current.play().catch(e => console.error("Surgical play failed:", e));
                 }
                 onStream?.(updatedStream);
             };
