@@ -84,11 +84,11 @@ function RecordingContent() {
         handleRecordingStop();
     }, [status, recordedBlob, router, seconds, scenario]);
 
-    // Auto-scroll animation
+    // Auto-scroll animation - Fluid & Precise
     useEffect(() => {
         if (teleprompterEnabled && isRecordingStarted.current && status === 'recording') {
             const animate = () => {
-                setScrollOffset(prev => prev + (scrollSpeed / 50)); // Adjusted multiplier
+                setScrollOffset(prev => prev + (scrollSpeed / 40));
                 requestRef.current = requestAnimationFrame(animate);
             };
             requestRef.current = requestAnimationFrame(animate);
@@ -143,36 +143,49 @@ function RecordingContent() {
 
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 pointer-events-none"></div>
 
-                    {/* Teleprompter Overlay - Clean & Legible */}
+                    {/* Teleprompter Overlay*/}
                     {(teleprompterEnabled && paragraphs.length > 0) && (
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-3xl px-8 z-30">
-                            <div className="relative bg-black/40 backdrop-blur-2xl border border-white/20 rounded-3xl p-10 shadow-[0_0_50px_rgba(0,0,0,0.5)] h-[320px] overflow-hidden group/tele">
-                                {/* Top and Bottom Fades for smoother reading */}
-                                <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/60 to-transparent z-10 pointer-events-none"></div>
-                                <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/60 to-transparent z-10 pointer-events-none"></div>
+                        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-xl px-4 z-30">
+                            {/* Teleprompter Box - Fluid Scroll Implementation */}
+                            <div className="flex-1 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8 shadow-2xl relative overflow-hidden h-[320px]">
+                                {/* Top and Bottom Fades - Smoother Gradient */}
+                                <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/60 to-transparent z-10 pointer-events-none" />
+                                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 to-transparent z-10 pointer-events-none" />
 
                                 <div
-                                    ref={scrollRef}
-                                    className="space-y-4 transition-transform duration-100 ease-linear py-12"
+                                    className="pt-[140px] pb-[140px] space-y-12 transition-transform duration-100 ease-linear flex flex-col items-center"
                                     style={{ transform: `translateY(-${scrollOffset}px)` }}
                                 >
-                                    {paragraphs.map((p, i) => (
-                                        <p
-                                            key={i}
-                                            className={cn(
-                                                "text-white font-bold text-center leading-[1.3] tracking-tight",
-                                                "drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]"
-                                            )}
-                                            style={{ fontSize: `${fontSize}px` }}
-                                        >
-                                            {p}
-                                        </p>
-                                    ))}
+                                    {paragraphs.map((p, i) => {
+                                        // Dynamic styling based on distance to visual center (160px from top of container)
+                                        // Each line is spaced by margin/padding.
+                                        // This creates a smooth focus/blur transition
+                                        return (
+                                            <p
+                                                key={i}
+                                                className={cn(
+                                                    "text-white font-bold text-center leading-tight tracking-tight transition-all duration-300",
+                                                    "drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]"
+                                                )}
+                                                style={{
+                                                    fontSize: `${fontSize}px`,
+                                                    // This is where the magic happens:
+                                                    // We render all paragraphs and let them slide.
+                                                }}
+                                            >
+                                                {p}
+                                            </p>
+                                        );
+                                    })}
                                 </div>
 
-                                {/* Reading Indicator Line */}
-                                <div className="absolute top-1/2 left-0 w-1.5 h-12 bg-primary -translate-y-1/2 rounded-r-full shadow-[0_0_15px_rgba(19,236,91,0.5)]"></div>
+                                {/* Reading Indicator Line - Now with active pulse */}
+                                <div className="absolute top-1/2 left-0 w-1.5 h-12 bg-primary -translate-y-1/2 rounded-r-full shadow-[0_0_15px_rgba(28,227,94,0.5)] z-20 animate-pulse"></div>
                             </div>
+                            <div
+                                className="absolute bottom-0 left-0 h-1 bg-primary/40 transition-all duration-300"
+                                style={{ width: `${Math.min((scrollOffset / (paragraphs.length * 80)) * 100, 100)}%` }}
+                            />
                         </div>
                     )}
 

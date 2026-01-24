@@ -55,14 +55,12 @@ function SetupContent() {
         localStorage.setItem("reflektor_teleprompter_scroll_speed", scrollSpeed.toString());
     }, [scriptText, teleprompterEnabled, fontSize, scrollSpeed]);
 
+    const restartPreview = () => setPreviewOffset(0);
+
     useEffect(() => {
         if (teleprompterEnabled && scrollSpeed > 0) {
             const animate = () => {
-                setPreviewOffset(prev => {
-                    const next = prev + (scrollSpeed / 50);
-                    // Reset if it goes too far (simple heuristic for preview)
-                    return next > 600 ? -100 : next;
-                });
+                setPreviewOffset(prev => prev + (scrollSpeed / 40));
                 previewRequestRef.current = requestAnimationFrame(animate);
             };
             previewRequestRef.current = requestAnimationFrame(animate);
@@ -277,28 +275,60 @@ function SetupContent() {
                                     </div>
                                 </div>
 
-                                <div className="bg-[#102216] rounded-2xl p-8 border border-[#28392e] relative overflow-hidden h-[300px] flex flex-col items-center max-w-2xl mx-auto w-full group/tele shadow-inner">
-                                    <div className="absolute top-2 left-3 text-[10px] font-bold text-primary/40 tracking-widest uppercase z-10 bg-[#102216]/80 px-2 py-0.5 rounded-full border border-primary/10">Live Preview</div>
+                                <div className="w-full max-w-xl mx-auto mt-6">
+                                    {/* Teleprompter Box - Fluid Preview Match */}
+                                    <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8 shadow-2xl relative overflow-hidden h-[300px] flex flex-col items-center">
+                                        {/* Top and Bottom Fades */}
+                                        <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-background-dark to-transparent z-10 pointer-events-none" />
+                                        <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background-dark to-transparent z-10 pointer-events-none" />
 
-                                    {/* Top and Bottom Fades - EXACT MATCH */}
-                                    <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-[#102216] to-transparent z-10 pointer-events-none" />
-                                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#102216] to-transparent z-10 pointer-events-none" />
+                                        <div className="absolute top-2 left-3 right-3 flex justify-between items-center z-20">
+                                            <div className="text-[10px] font-bold text-primary/60 tracking-widest uppercase bg-black/40 px-2 py-0.5 rounded-full border border-primary/10">Live Preview</div>
+                                            <button
+                                                onClick={restartPreview}
+                                                className="group/reset flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 transition-all text-[10px] font-bold text-white/70 hover:text-white"
+                                            >
+                                                <span className="material-symbols-outlined !text-xs group-hover:rotate-[-120deg] transition-transform duration-500">replay</span>
+                                                REINICIAR
+                                            </button>
+                                        </div>
 
-                                    <div
-                                        className="w-full transition-all duration-100 ease-linear py-24 text-white font-bold text-center leading-[1.3] tracking-tight whitespace-pre-wrap"
-                                        style={{
-                                            transform: `translateY(${-previewOffset}px)`,
-                                            fontSize: `${fontSize}px`,
-                                            textShadow: '0 2px 8px rgba(0,0,0,0.0)'
-                                        }}
-                                    >
-                                        {scriptText || "Escribe tu guion arriba para verlo aquí..."}
+                                        <div
+                                            ref={previewContainerRef}
+                                            className="w-full transition-transform duration-100 ease-linear py-[130px] flex flex-col items-center space-y-12"
+                                            style={{
+                                                transform: `translateY(${-previewOffset}px)`,
+                                            }}
+                                        >
+                                            {paragraphs.length > 0 ? (
+                                                paragraphs.map((p, i) => (
+                                                    <p
+                                                        key={i}
+                                                        className="text-white font-bold text-center leading-tight tracking-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] transition-all duration-300"
+                                                        style={{ fontSize: `${fontSize}px` }}
+                                                    >
+                                                        {p}
+                                                    </p>
+                                                ))
+                                            ) : (
+                                                <>
+                                                    <p className="text-white/30 text-xl font-medium blur-[1.5px]">Escribe tu guion arriba...</p>
+                                                    <p className="text-white text-3xl font-bold leading-tight tracking-tight">
+                                                        Tu texto se deslizará suavemente por aquí durante la grabación.
+                                                    </p>
+                                                    <p className="text-white/30 text-xl font-medium blur-[1.5px]">¡Practica para obtener mejores resultados!</p>
+                                                </>
+                                            )}
+                                        </div>
+
+                                        {/* Reading Indicator Line */}
+                                        <div className="absolute top-1/2 left-0 w-1.5 h-12 bg-primary -translate-y-1/2 rounded-r-full shadow-[0_0_15px_rgba(28,227,94,0.5)] z-20"></div>
+
+                                        <div
+                                            className="absolute bottom-0 left-0 h-1 bg-primary/40 transition-all duration-300"
+                                            style={{ width: `${Math.min((previewOffset / (Math.max(paragraphs.length, 1) * 80)) * 100, 100)}%` }}
+                                        />
                                     </div>
-
-                                    {/* Reading Indicator Line - EXACT MATCH */}
-                                    <div className="absolute top-1/2 left-0 w-1.5 h-10 bg-primary -translate-y-1/2 rounded-r-full shadow-[0_0_15px_rgba(19,236,91,0.4)] z-20"></div>
-
-                                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#13ec3b]/2 to-transparent pointer-events-none" />
                                 </div>
                             </div>
                         )}
