@@ -63,9 +63,9 @@ export function CameraPreview({
         try {
             const constraints: MediaStreamConstraints = {
                 video: videoDeviceId
-                    ? { deviceId: { exact: videoDeviceId } }
+                    ? { deviceId: { ideal: videoDeviceId } } // Use ideal instead of exact for better compatibility
                     : { facingMode: "user" }, // Use front camera by default on mobile
-                audio: audioDeviceId ? { deviceId: { exact: audioDeviceId } } : true
+                audio: audioDeviceId ? { deviceId: { ideal: audioDeviceId } } : true
             };
             stream = await navigator.mediaDevices.getUserMedia(constraints);
             videoOk = true;
@@ -95,9 +95,8 @@ export function CameraPreview({
 
             // Step 3: Probe Audio
             try {
-                const audioConstraints = audioDeviceId ? { deviceId: { exact: audioDeviceId } } : true;
+                const audioConstraints = audioDeviceId ? { deviceId: { ideal: audioDeviceId } } : true;
                 const audioStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
-
                 if (stream) {
                     audioStream.getTracks().forEach(t => stream?.addTrack(t));
                 } else {
@@ -159,7 +158,7 @@ export function CameraPreview({
                         stream.removeTrack(t);
                     });
                     try {
-                        const vConstraints = videoDeviceId ? { deviceId: { exact: videoDeviceId } } : true;
+                        const vConstraints = videoDeviceId ? { deviceId: { ideal: videoDeviceId } } : true;
                         const newVideoStream = await navigator.mediaDevices.getUserMedia({ video: vConstraints });
                         const newTrack = newVideoStream.getVideoTracks()[0];
                         if (newTrack) {
@@ -180,7 +179,7 @@ export function CameraPreview({
                         stream.removeTrack(t);
                     });
                     try {
-                        const aConstraints = audioDeviceId ? { deviceId: { exact: audioDeviceId } } : true;
+                        const aConstraints = audioDeviceId ? { deviceId: { ideal: audioDeviceId } } : true;
                         const newAudioStream = await navigator.mediaDevices.getUserMedia({ audio: aConstraints });
                         const newTrack = newAudioStream.getAudioTracks()[0];
                         if (newTrack) {
@@ -273,6 +272,7 @@ export function CameraPreview({
                 autoPlay
                 muted
                 playsInline
+                disablePictureInPicture
                 className={cn(
                     "absolute inset-0 size-full object-cover transform -scale-x-100 transition-opacity duration-300",
                     permissionError ? "opacity-0" : "opacity-100"
