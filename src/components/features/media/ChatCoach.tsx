@@ -60,12 +60,12 @@ export function ChatCoach({ sessionData }: ChatCoachProps) {
     };
 
     return (
-        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4 pointer-events-none">
+        <div className="fixed bottom-4 right-4 left-4 sm:left-auto sm:bottom-6 sm:right-6 z-50 flex flex-col items-end gap-4 pointer-events-none">
             {/* Chat Window */}
             <div className={cn(
-                "w-96 max-h-[600px] rounded-2xl flex flex-col overflow-hidden shadow-2xl transition-all duration-500 border border-white/20 origin-bottom-right pointer-events-auto",
-                // Backdrop-blur-xl (original) and 80% opacity (slightly more than original 60%)
-                "backdrop-blur-xl bg-surface-dark/80",
+                "w-full sm:w-96 max-h-[70vh] sm:max-h-[600px] rounded-2xl flex flex-col overflow-hidden shadow-2xl transition-all duration-500 border border-white/20 origin-bottom sm:origin-bottom-right pointer-events-auto",
+                // Backdrop-blur-xl (original) and 90% opacity for better mobile contrast
+                "backdrop-blur-xl bg-surface-dark/90",
                 isOpen ? "scale-100 opacity-100 translate-y-0" : "scale-0 opacity-0 translate-y-10"
             )}>
                 {/* Header */}
@@ -87,7 +87,7 @@ export function ChatCoach({ sessionData }: ChatCoachProps) {
                     </div>
                     <button
                         onClick={() => setIsOpen(false)}
-                        className="text-text-muted hover:text-white transition-colors"
+                        className="text-white/50 hover:text-white transition-colors"
                     >
                         <span className="material-symbols-outlined text-[20px]">close</span>
                     </button>
@@ -96,8 +96,7 @@ export function ChatCoach({ sessionData }: ChatCoachProps) {
                 {/* Messages Area */}
                 <div
                     ref={scrollRef}
-                    className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 scrollbar-hide bg-black/40"
-                    style={{ minHeight: '350px' }}
+                    className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 scrollbar-hide bg-black/40 min-h-[250px] sm:min-h-[350px]"
                 >
                     {messages.map((msg, i) => (
                         <div
@@ -154,10 +153,10 @@ export function ChatCoach({ sessionData }: ChatCoachProps) {
             {/* Toggle Button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="size-16 rounded-full bg-primary shadow-[0_0_30px_rgba(19,236,91,0.4)] flex items-center justify-center text-background-dark hover:scale-110 active:scale-95 transition-all group overflow-hidden border-4 border-background-dark pointer-events-auto"
+                className="size-14 sm:size-16 rounded-full bg-primary shadow-[0_0_30px_rgba(19,236,91,0.4)] flex items-center justify-center text-background-dark hover:scale-110 active:scale-95 transition-all group overflow-hidden border-4 border-background-dark pointer-events-auto"
             >
                 <span className={cn(
-                    "material-symbols-outlined text-[32px] transition-transform duration-500",
+                    "material-symbols-outlined text-[28px] sm:text-[32px] transition-transform duration-500",
                     isOpen ? "rotate-180" : "group-hover:rotate-12"
                 )}>
                     {isOpen ? 'close' : 'chat_bubble'}

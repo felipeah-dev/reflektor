@@ -127,84 +127,96 @@ function RecordingContent() {
             </header>
 
             <main className="flex-1 flex flex-col items-center justify-center relative p-4 md:p-8 w-full max-w-[1400px] mx-auto">
-                <div className="relative w-full max-w-4xl aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/10 group">
-                    <div className="absolute inset-0">
-                        <CameraPreview
-                            showOverlays={false}
-                            audioEnabled={micEnabled}
-                            videoEnabled={cameraEnabled}
-                            videoDeviceId={videoDeviceId}
-                            audioDeviceId={audioDeviceId}
-                            onToggleVideo={() => setCameraEnabled(!cameraEnabled)}
-                            onToggleAudio={() => setMicEnabled(!micEnabled)}
-                            onStream={setActiveStream}
-                        />
-                    </div>
-
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 pointer-events-none"></div>
-
-                    {/* Teleprompter Overlay*/}
+                <div className="relative w-full max-w-4xl flex flex-col md:block">
+                    {/* Teleprompter: Mobile version (Above Video) */}
                     {(teleprompterEnabled && paragraphs.length > 0) && (
-                        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-xl px-4 z-30">
-                            {/* Teleprompter Box - Fluid Scroll Implementation */}
-                            <div className="flex-1 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8 shadow-2xl relative overflow-hidden h-[320px]">
-                                {/* Top and Bottom Fades - Smoother Gradient */}
-                                <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/60 to-transparent z-10 pointer-events-none" />
-                                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 to-transparent z-10 pointer-events-none" />
+                        <div className="md:hidden w-full mb-6 px-0 animate-in fade-in slide-in-from-top-4 duration-500">
+                            <div className="w-full bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6 shadow-2xl relative overflow-hidden h-[180px] flex flex-col items-center">
+                                {/* Mobile Fades - Using background-dark for seamless blend */}
+                                <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-background-dark to-transparent z-10 pointer-events-none" />
+                                <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background-dark to-transparent z-10 pointer-events-none" />
 
                                 <div
-                                    className="pt-[140px] pb-[140px] space-y-12 transition-transform duration-100 ease-linear flex flex-col items-center"
+                                    className="pt-[70px] pb-[70px] space-y-8 transition-transform duration-100 ease-linear flex flex-col items-center"
                                     style={{ transform: `translateY(-${scrollOffset}px)` }}
                                 >
-                                    {paragraphs.map((p, i) => {
-                                        // Dynamic styling based on distance to visual center (160px from top of container)
-                                        // Each line is spaced by margin/padding.
-                                        // This creates a smooth focus/blur transition
-                                        return (
-                                            <p
-                                                key={i}
-                                                className={cn(
-                                                    "text-white font-bold text-center leading-tight tracking-tight transition-all duration-300",
-                                                    "drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]"
-                                                )}
-                                                style={{
-                                                    fontSize: `${fontSize}px`,
-                                                    // This is where the magic happens:
-                                                    // We render all paragraphs and let them slide.
-                                                }}
-                                            >
-                                                {p}
-                                            </p>
-                                        );
-                                    })}
+                                    {paragraphs.map((p, i) => (
+                                        <p
+                                            key={i}
+                                            className="text-white font-bold text-center leading-tight tracking-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] transition-all duration-300"
+                                            style={{ fontSize: `${fontSize}px` }}
+                                        >
+                                            {p}
+                                        </p>
+                                    ))}
                                 </div>
-
-                                {/* Reading Indicator Line - Now with active pulse */}
-                                <div className="absolute top-1/2 left-0 w-1.5 h-12 bg-primary -translate-y-1/2 rounded-r-full shadow-[0_0_15px_rgba(28,227,94,0.5)] z-20 animate-pulse"></div>
+                                <div className="absolute top-1/2 left-0 w-1.5 h-10 bg-primary -translate-y-1/2 rounded-r-full shadow-[0_0_15px_rgba(28,227,94,0.5)] z-20 animate-pulse"></div>
                             </div>
-                            <div
-                                className="absolute bottom-0 left-0 h-1 bg-primary/40 transition-all duration-300"
-                                style={{ width: `${Math.min((scrollOffset / (paragraphs.length * 80)) * 100, 100)}%` }}
-                            />
                         </div>
                     )}
 
-                    <div className="absolute top-6 left-6 flex items-center gap-3 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 z-10">
-                        <div className="relative flex items-center justify-center size-3">
-                            <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 animate-ping"></span>
-                            <span className="relative inline-flex rounded-full size-2 bg-primary"></span>
+                    <div className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/10 group">
+                        <div className="absolute inset-0">
+                            <CameraPreview
+                                showOverlays={false}
+                                audioEnabled={micEnabled}
+                                videoEnabled={cameraEnabled}
+                                videoDeviceId={videoDeviceId}
+                                audioDeviceId={audioDeviceId}
+                                onToggleVideo={() => setCameraEnabled(!cameraEnabled)}
+                                onToggleAudio={() => setMicEnabled(!micEnabled)}
+                                onStream={setActiveStream}
+                            />
                         </div>
-                        <span className="text-white text-xs font-bold tracking-widest uppercase">Recording...</span>
-                    </div>
 
-                    <div className="absolute top-6 right-6 flex items-end gap-1 h-6">
-                        <AudioVisualizer stream={activeStream} />
-                    </div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 pointer-events-none"></div>
 
-                    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                        <div className="font-display font-medium text-white/60 text-sm tracking-widest mb-2 uppercase">Elapsed Time</div>
-                        <div className="flex items-baseline gap-1 font-variant-numeric tabular-nums text-white text-5xl md:text-7xl font-light tracking-tighter drop-shadow-lg">
-                            <span>{formatTime(seconds)}</span>
+                        {/* Teleprompter: Desktop version (Overlay) */}
+                        {(teleprompterEnabled && paragraphs.length > 0) && (
+                            <div className="hidden md:block absolute inset-x-0 top-0 bottom-0 z-30 pointer-events-none">
+                                <div className="absolute top-[15%] left-1/2 -translate-x-1/2 w-full max-w-xl px-4 pointer-events-auto">
+                                    <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl relative overflow-hidden h-[300px] flex flex-col items-center">
+                                        {/* Desktop Fades - Original darker style */}
+                                        <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/60 to-transparent z-10 pointer-events-none" />
+                                        <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/60 to-transparent z-10 pointer-events-none" />
+
+                                        <div
+                                            className="pt-[130px] pb-[130px] space-y-12 transition-transform duration-100 ease-linear flex flex-col items-center"
+                                            style={{ transform: `translateY(-${scrollOffset}px)` }}
+                                        >
+                                            {paragraphs.map((p, i) => (
+                                                <p
+                                                    key={i}
+                                                    className="text-white font-bold text-center leading-tight tracking-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] transition-all duration-300"
+                                                    style={{ fontSize: `${fontSize}px` }}
+                                                >
+                                                    {p}
+                                                </p>
+                                            ))}
+                                        </div>
+                                        <div className="absolute top-1/2 left-0 w-1.5 h-12 bg-primary -translate-y-1/2 rounded-r-full shadow-[0_0_15px_rgba(28,227,94,0.5)] z-20 animate-pulse"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="absolute top-6 left-6 flex items-center gap-3 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 z-10">
+                            <div className="relative flex items-center justify-center size-3">
+                                <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 animate-ping"></span>
+                                <span className="relative inline-flex rounded-full size-2 bg-primary"></span>
+                            </div>
+                            <span className="text-white text-xs font-bold tracking-widest uppercase">Recording...</span>
+                        </div>
+
+                        <div className="absolute top-6 right-6 flex items-end gap-1 h-6">
+                            <AudioVisualizer stream={activeStream} />
+                        </div>
+
+                        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center">
+                            <div className="font-display font-medium text-white/60 text-sm tracking-widest mb-2 uppercase">Elapsed Time</div>
+                            <div className="flex items-baseline gap-1 font-variant-numeric tabular-nums text-white text-5xl md:text-7xl font-light tracking-tighter drop-shadow-lg">
+                                <span>{formatTime(seconds)}</span>
+                            </div>
                         </div>
                     </div>
                 </div>

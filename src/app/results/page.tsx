@@ -701,11 +701,11 @@ export default function ResultsPage() {
                         </div>
                     </div>
                 </div>
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t border-surface-hover">
-                    <div className="flex gap-4 w-full md:w-auto">
+                <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 mt-8 pt-6 border-t border-surface-hover">
+                    <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
                         <button
                             onClick={() => alert("Share feature coming soon! (Blob URL: " + session?.videoUrl + ")")}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-2 rounded-lg h-12 px-6 border border-surface-hover bg-surface-dark hover:bg-surface-hover hover:border-muted transition-all text-white font-bold tracking-wide"
+                            className="flex items-center justify-center gap-2 rounded-lg h-12 px-6 border border-surface-hover bg-surface-dark hover:bg-surface-hover hover:border-muted transition-all text-white font-bold tracking-wide sm:flex-1 lg:flex-none"
                         >
                             <span className="material-symbols-outlined text-[20px]">share</span>
                             <span>Share</span>
@@ -714,7 +714,7 @@ export default function ResultsPage() {
                             onClick={exportWithAnnotations}
                             disabled={isExporting}
                             className={cn(
-                                "flex-1 md:flex-none flex items-center justify-center gap-2 rounded-lg h-12 px-6 transition-all font-bold tracking-wide shadow-lg active:scale-95 min-w-[180px]",
+                                "flex items-center justify-center gap-2 rounded-lg h-12 px-6 transition-all font-bold tracking-wide shadow-lg active:scale-95 sm:flex-1 lg:flex-none min-w-0 sm:min-w-[200px]",
                                 isExporting
                                     ? "bg-surface-dark text-muted cursor-not-allowed border border-surface-hover"
                                     : "bg-white hover:bg-gray-200 text-background-dark hover:shadow-xl hover:scale-105"
@@ -723,19 +723,21 @@ export default function ResultsPage() {
                             {isExporting ? (
                                 <>
                                     <div className="size-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                                    <span>{Math.round(exportProgress)}% Exportando...</span>
+                                    <span className="truncate">{Math.round(exportProgress)}% Exportando...</span>
                                 </>
                             ) : (
                                 <>
                                     <span className="material-symbols-outlined text-[20px]">movie_edit</span>
-                                    <span>Descargar con Feedback</span>
+                                    <span className="truncate">Descargar con Feedback</span>
                                 </>
                             )}
                         </button>
-
                     </div>
 
-                    <button onClick={() => router.push('/action')} className="w-full md:w-auto flex items-center justify-center gap-2 rounded-lg h-12 px-8 bg-primary hover:bg-[#0fdc50] text-background-dark transition-all font-bold tracking-wide shadow-[0_0_20px_rgba(19,236,91,0.3)] hover:shadow-[0_0_25px_rgba(19,236,91,0.5)] hover:scale-105 active:scale-95 group">
+                    <button
+                        onClick={() => router.push('/action')}
+                        className="w-full lg:w-auto flex items-center justify-center gap-2 rounded-lg h-12 px-8 bg-primary hover:bg-[#0fdc50] text-background-dark transition-all font-bold tracking-wide shadow-[0_0_20px_rgba(19,236,91,0.3)] hover:shadow-[0_0_25px_rgba(19,236,91,0.5)] hover:scale-105 active:scale-95 group"
+                    >
                         <span>Finish Review</span>
                         <span className="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
                     </button>
