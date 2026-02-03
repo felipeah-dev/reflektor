@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Logo } from "@/components/ui/Logo";
 import { sessionStore } from "@/lib/sessionStore";
 import { analyzeVideo } from "@/lib/gemini";
+import { useNetworkQuality } from "@/hooks/useNetworkQuality";
 
 import Link from "next/link";
 
@@ -14,6 +15,8 @@ export default function ProcessingPage() {
     const [statusMsg, setStatusMsg] = useState("We are analyzing your multimodal data with AI. Please do not close this window.");
     const [isAnalysisComplete, setIsAnalysisComplete] = useState(false);
     const [hasError, setHasError] = useState(false);
+    const networkQuality = useNetworkQuality();
+    const [isNetworkFailure, setIsNetworkFailure] = useState(false);
 
     useEffect(() => {
         const runAnalysis = async () => {
@@ -34,9 +37,16 @@ export default function ProcessingPage() {
 
                 setProgress(100);
                 setIsAnalysisComplete(true);
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Analysis failed:", error);
-                setStatusMsg("Analysis failed. Please try again.");
+
+                if (error.message?.includes("NETWORK_ERROR")) {
+                    setStatusMsg("Hubo un problema de conexión. No te preocupes, tu video está guardado localmente. Busca una red más estable e inténtalo de nuevo.");
+                    setIsNetworkFailure(true);
+                } else {
+                    setStatusMsg("Analysis failed. Please try again.");
+                }
+
                 setHasError(true);
             }
         };
@@ -92,14 +102,41 @@ export default function ProcessingPage() {
                         <p className="text-[#9db9a6] text-lg font-light">
                             {statusMsg}
                         </p>
+
+                        {networkQuality !== 'good' && !hasError && (
+                            <div className="mt-4 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30 flex items-start gap-3 animate-fade-in">
+                                <span className="material-symbols-outlined text-yellow-500">
+                                    {networkQuality === 'offline' ? 'cloud_off' : 'network_check'}
+                                </span>
+                                <div>
+                                    <p className="text-yellow-500 font-bold text-sm">
+                                        {networkQuality === 'offline' ? 'Estás offline' : 'Conexión inestable detectada'}
+                                    </p>
+                                    <p className="text-white/80 text-xs mt-0.5">
+                                        {networkQuality === 'offline'
+                                            ? 'Por favor, reconéctate para continuar con el análisis.'
+                                            : 'Esto podría retrasar la subida del video. Te recomendamos buscar un lugar con mejor señal.'}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
                         {hasError && (
-                            <button
-                                onClick={() => window.location.reload()}
-                                className="mt-4 px-6 py-2 bg-primary text-background-dark font-bold rounded-full hover:bg-primary/90 transition-colors flex items-center gap-2 w-fit mx-auto md:mx-0"
-                            >
-                                <span className="material-symbols-outlined">refresh</span>
-                                Retry Analysis
-                            </button>
+                            <div className="flex flex-col gap-4 mt-4">
+                                <button
+                                    onClick={() => window.location.reload()}
+                                    className="px-8 py-3 bg-primary text-background-dark font-bold rounded-full hover:bg-primary/90 transition-all flex items-center justify-center gap-2 w-full md:w-fit shadow-[0_0_20px_rgba(19,236,91,0.3)] hover:scale-105 active:scale-95"
+                                >
+                                    <span className="material-symbols-outlined">refresh</span>
+                                    {isNetworkFailure ? 'Intentar subir de nuevo' : 'Retry Analysis'}
+                                </button>
+
+                                {isNetworkFailure && (
+                                    <p className="text-xs text-muted italic">
+                                        Tu video no se perderá al reintentar, se encuentra guardado en la memoria de tu navegador.
+                                    </p>
+                                )}
+                            </div>
                         )}
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mt-4">

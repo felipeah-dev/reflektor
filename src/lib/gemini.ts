@@ -266,8 +266,14 @@ export async function analyzeVideo(videoBlob: Blob, onStatusUpdate: (msg: string
 
         return analysisData;
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Gemini Analysis Error:", error);
+
+        // Handle common network errors
+        if (error instanceof TypeError && error.message.includes('fetch')) {
+            throw new Error("NETWORK_ERROR: No se pudo establecer una conexión estable para subir el video. Por favor, revisa tu internet.");
+        }
+
         throw error;
     }
 }
