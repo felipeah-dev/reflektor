@@ -1,6 +1,11 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-export async function analyzeVideo(videoBlob: Blob, onStatusUpdate: (msg: string) => void, scenario: string = "custom") {
+export async function analyzeVideo(
+    videoBlob: Blob,
+    onStatusUpdate: (msg: string) => void,
+    scenario: string = "custom",
+    totalDuration?: number
+) {
     try {
         onStatusUpdate("Obtaining secure connection token...");
         const tokenResponse = await fetch('/api/gemini/token');
@@ -214,6 +219,10 @@ export async function analyzeVideo(videoBlob: Blob, onStatusUpdate: (msg: string
                     systemInstruction: systemInstruction
                 });
 
+                const durationPrompt = totalDuration
+                    ? `The video is exactly ${totalDuration} seconds long. Ensure all timestamps in "start" and "end" are within 0 and ${totalDuration}.`
+                    : "";
+
                 result = await model.generateContentStream([
                     {
                         inlineData: {
@@ -222,6 +231,7 @@ export async function analyzeVideo(videoBlob: Blob, onStatusUpdate: (msg: string
                         }
                     },
                     `Analyze this ${scenario} session. 
+                    ${durationPrompt}
                     1) Detect the primary language. 
                     2) Identify specific moments of eye contact loss or gestures. 
                     3) Detect REAL filler words (fillers/muletillas) with high precision.

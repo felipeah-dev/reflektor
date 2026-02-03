@@ -27,7 +27,12 @@ export default function ProcessingPage() {
                     return;
                 }
 
-                const analysisResults = await analyzeVideo(session.videoBlob, setStatusMsg, session.scenario);
+                const analysisResults = await analyzeVideo(
+                    session.videoBlob,
+                    setStatusMsg,
+                    session.scenario,
+                    session.duration
+                );
 
                 // Save analysis results to the session store
                 await sessionStore.setSession({

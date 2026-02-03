@@ -36,6 +36,7 @@ export default function ResultsPage() {
             const data = await sessionStore.getSession();
             if (data) {
                 setSession(data);
+                if (data.duration) setVideoDuration(data.duration);
             }
         };
         loadSession();
@@ -285,6 +286,11 @@ export default function ResultsPage() {
             }
             setVideoDuration(duration);
 
+            // Fallback for Mobile/PC metadata failures
+            if ((duration === 0 || isNaN(duration) || duration === Infinity) && session?.duration) {
+                setVideoDuration(session.duration);
+            }
+
             // Fix for WebM duration being Infinity: seek to end and back
             if (videoRef.current.duration === Infinity) {
                 const v = videoRef.current;
@@ -459,23 +465,27 @@ export default function ResultsPage() {
                                         className="absolute h-1.5 bg-primary rounded-full shadow-[0_0_10px_rgba(19,236,91,0.5)]"
                                         style={{ width: `${(currentTime / (videoDuration || 1)) * 100}%` }}
                                     ></div>
-                                    {/* Markers */}
-                                    <div
-                                        className="absolute left-[15%] top-1/2 -translate-y-1/2 size-3 bg-primary rounded-full border-2 border-black z-10 hover:scale-150 transition-transform cursor-pointer"
-                                        title="Strong Intro"
-                                    ></div>
-                                    <div
-                                        className="absolute left-[32%] top-1/2 -translate-y-1/2 size-3 bg-yellow-500 rounded-full border-2 border-black z-10 hover:scale-150 transition-transform cursor-pointer"
-                                        title="Filler Word"
-                                    ></div>
-                                    <div
-                                        className="absolute left-[58%] top-1/2 -translate-y-1/2 size-3 bg-yellow-500 rounded-full border-2 border-black z-10 hover:scale-150 transition-transform cursor-pointer"
-                                        title="Repetitive Gesture"
-                                    ></div>
-                                    <div
-                                        className="absolute left-[90%] top-1/2 -translate-y-1/2 size-3 bg-primary rounded-full border-2 border-black z-10 hover:scale-150 transition-transform cursor-pointer"
-                                        title="Good Pace"
-                                    ></div>
+                                    {/* Markers - DYNAMIC from Analysis */}
+                                    {(session?.analysis?.events || []).map((event: any, idx: number) => {
+                                        const isWarning = event.type === 'filler' ||
+                                            event.type === 'spatial_warning' ||
+                                            event.type === 'pace_issue';
+                                        return (
+                                            <div
+                                                key={idx}
+                                                className={cn(
+                                                    "absolute top-1/2 -translate-y-1/2 size-2 sm:size-3 rounded-full border-2 border-black z-10 hover:scale-150 transition-transform cursor-pointer",
+                                                    isWarning ? "bg-yellow-500" : "bg-primary"
+                                                )}
+                                                style={{ left: `${(event.start / (videoDuration || session?.duration || 1)) * 100}%` }}
+                                                title={event.type.toUpperCase()}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (videoRef.current) videoRef.current.currentTime = event.start;
+                                                }}
+                                            ></div>
+                                        );
+                                    })}
                                     <div
                                         className="absolute size-4 bg-white rounded-full shadow-md z-20 cursor-grab active:cursor-grabbing hover:scale-110 transition-transform"
                                         style={{ left: `${(currentTime / (videoDuration || 1)) * 100}%`, transform: 'translate(-50%, -50%)' }}
@@ -677,7 +687,7 @@ export default function ResultsPage() {
                                                 }}>
                                                     <div className="flex items-center justify-between mb-1">
                                                         <span className={cn("text-xs font-bold", isWarning ? "text-yellow-500" : "text-primary")}>
-                                                            {formatTimeFull(Math.min(event.start, videoDuration))}
+                                                            {formatTimeFull(event.start)}
                                                         </span>
                                                         {isWarning && (
                                                             <span className="text-[10px] bg-yellow-500/20 text-yellow-500 px-1.5 rounded uppercase font-bold">Review</span>
