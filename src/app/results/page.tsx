@@ -8,8 +8,8 @@ import ResultsCanvas from "@/components/features/media/ResultsCanvas";
 import { Logo } from "@/components/ui/Logo";
 import { cn } from "@/lib/utils";
 import { ChatCoach } from "@/components/features/media/ChatCoach";
-
 import { sessionStore } from "@/lib/sessionStore";
+import { useNetworkQuality } from "@/hooks/useNetworkQuality";
 
 
 
@@ -28,6 +28,7 @@ export default function ResultsPage() {
     const requestRef = useRef<number | null>(null);
     const [isExporting, setIsExporting] = useState(false);
     const [exportProgress, setExportProgress] = useState(0);
+    const networkQuality = useNetworkQuality();
 
 
     useEffect(() => {
@@ -731,6 +732,15 @@ export default function ResultsPage() {
                                 </>
                             )}
                         </button>
+
+                        {(networkQuality === 'poor' || networkQuality === 'offline') && (
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-[10px] sm:text-xs font-bold animate-pulse">
+                                <span className="material-symbols-outlined text-sm">
+                                    {networkQuality === 'offline' ? 'cloud_off' : 'signal_cellular_alt_1_bar'}
+                                </span>
+                                <span>{networkQuality === 'offline' ? 'Sin conexión a internet' : 'Conexión lenta detectada'}</span>
+                            </div>
+                        )}
                     </div>
 
                     <button

@@ -3,10 +3,13 @@
 import React, { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { getChatResponse } from "@/lib/chat";
+import { useNetworkQuality } from "@/hooks/useNetworkQuality";
 
 interface Message {
     role: 'user' | 'model';
     text: string;
+    isError?: boolean;
+    retryData?: string;
 }
 
 interface ChatCoachProps {
@@ -25,26 +28,44 @@ export function ChatCoach({ sessionData }: ChatCoachProps) {
     const [isLoading, setIsLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
 
+    const networkQuality = useNetworkQuality();
+
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [messages]);
 
-    const handleSend = async () => {
-        if (!inputValue.trim() || isLoading) return;
+    const handleSend = async (forcedValue?: string) => {
+        const textToSubmit = forcedValue || inputValue;
+        if (!textToSubmit.trim() || isLoading) return;
 
-        const userMsg = inputValue.trim();
-        setInputValue("");
-        setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+        if (networkQuality === 'offline') {
+            setMessages(prev => [
+                ...prev,
+                { role: 'user', text: textToSubmit },
+                { role: 'model', text: "Lo siento, parece que no tienes conexión a internet. No puedo responder en este momento." }
+            ]);
+            setInputValue("");
+            return;
+        }
+
+        const userMsg = textToSubmit.trim();
+        if (!forcedValue) setInputValue("");
+
+        // Remove previous error message if this is a retry
+        if (forcedValue) {
+            setMessages(prev => prev.filter(m => !m.isError));
+        } else {
+            setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+        }
+
         setIsLoading(true);
 
         try {
-            // Convert messages to Gemini history format
-            // IMPORTANT: Gemini API history MUST start with 'user' role.
-            // Our index 0 is a placeholder model greeting, so we skip it.
             const history = messages
-                .slice(1) // Skip the greeting
+                .slice(1)
+                .filter(m => !m.isError)
                 .map(m => ({
                     role: m.role,
                     parts: [{ text: m.text }]
@@ -52,8 +73,18 @@ export function ChatCoach({ sessionData }: ChatCoachProps) {
 
             const response = await getChatResponse(userMsg, history, sessionData);
             setMessages(prev => [...prev, { role: 'model', text: response }]);
-        } catch (error) {
-            setMessages(prev => [...prev, { role: 'model', text: "Lo siento, tuve un problema conectando con mi cerebro de IA. ¿Podrías intentar de nuevo?" }]);
+        } catch (error: any) {
+            console.error("Chat Error:", error);
+            const errorText = networkQuality === 'poor'
+                ? "Parece que hay problemas con tu conexión. No he podido procesar tu respuesta, ¿podrías reintentar?"
+                : "Lo siento, tuve un problema conectando con mi cerebro de IA. ¿Podrías intentar de nuevo?";
+
+            setMessages(prev => [...prev, {
+                role: 'model',
+                text: errorText,
+                isError: true,
+                retryData: userMsg
+            }]);
         } finally {
             setIsLoading(false);
         }
@@ -113,6 +144,15 @@ export function ChatCoach({ sessionData }: ChatCoachProps) {
                                     : "bg-white/10 border-white/5 rounded-tl-none text-white/90"
                             )}>
                                 {msg.text}
+                                {msg.isError && msg.retryData && (
+                                    <button
+                                        onClick={() => handleSend(msg.retryData)}
+                                        className="mt-2 flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+                                    >
+                                        <span className="material-symbols-outlined text-[14px]">refresh</span>
+                                        REINTENTAR
+                                    </button>
+                                )}
                             </div>
                         </div>
                     ))}

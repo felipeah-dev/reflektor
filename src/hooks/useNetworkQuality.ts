@@ -6,7 +6,32 @@ export function useNetworkQuality() {
     const [quality, setQuality] = useState<NetworkQuality>('good');
 
     useEffect(() => {
-        const updateStatus = () => {
+        const checkPing = async () => {
+            try {
+                // Try to fetch a small resource to verify real connectivity
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+                const start = performance.now();
+                await fetch('/favicon.ico', {
+                    method: 'HEAD',
+                    signal: controller.signal,
+                    cache: 'no-store'
+                });
+                clearTimeout(timeoutId);
+                const end = performance.now();
+
+                // If it takes more than 1.5s for a HEAD request to local favicon, it's "poor"
+                if (end - start > 1500) {
+                    return 'poor';
+                }
+                return 'good';
+            } catch (e) {
+                return 'offline';
+            }
+        };
+
+        const updateStatus = async () => {
             if (!navigator.onLine) {
                 setQuality('offline');
                 return;
@@ -14,7 +39,6 @@ export function useNetworkQuality() {
 
             const conn = (navigator as any).connection;
             if (conn) {
-                // effectiveType can be 'slow-2g', '2g', '3g', or '4g'
                 if (conn.effectiveType === 'slow-2g' || conn.effectiveType === '2g' || conn.effectiveType === '3g') {
                     setQuality('poor');
                 } else if (conn.saveData) {
@@ -23,9 +47,9 @@ export function useNetworkQuality() {
                     setQuality('good');
                 }
             } else {
-                // If the Network Information API is not supported, we assume good if online 
-                // but we can't be sure without a speed test.
-                setQuality('good');
+                // Fallback to ping check if Network Info API is missing
+                const pingResult = await checkPing();
+                setQuality(pingResult);
             }
         };
 
@@ -39,14 +63,19 @@ export function useNetworkQuality() {
 
         updateStatus();
 
+        // Periodically check if we are in "good" but maybe it's actually slow (optional, but good for UX)
+        const interval = setInterval(updateStatus, 30000);
+
         return () => {
             window.removeEventListener('online', updateStatus);
             window.removeEventListener('offline', updateStatus);
             if (conn) {
                 conn.removeEventListener('change', updateStatus);
             }
+            clearInterval(interval);
         };
     }, []);
 
     return quality;
 }
+
