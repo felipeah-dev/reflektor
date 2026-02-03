@@ -48,6 +48,10 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
 
         const count = getEventCount(event);
 
+        // Responsive positioning logic
+        const pillAbove = top > 15; // If top is less than 15%, show below the box
+        const verticalPos = pillAbove ? "bottom-[calc(100%+8px)]" : "top-[calc(100%+8px)]";
+
         return (
           <div
             key={`${index}-${event.start}`}
@@ -64,13 +68,17 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
               height: `${height}%`,
             }}
           >
-            {/* Floating Feedback Pill - Optimized for long text */}
-            <div className="absolute -top-20 left-1/2 -translate-x-1/2 glass-pill flex items-center gap-3 z-30 w-max max-w-[280px] !rounded-2xl py-2.5 px-4">
+            {/* Floating Feedback Pill - Optimized for responsivity */}
+            <div className={cn(
+              "absolute left-1/2 -translate-x-1/2 glass-pill flex items-center gap-2 z-30",
+              "w-max max-w-[180px] sm:max-w-[280px] !rounded-xl py-1.5 px-3 sm:py-2.5 sm:px-4",
+              verticalPos
+            )}>
               <span className={cn(
-                "size-2 mr-1 rounded-full animate-pulse shrink-0",
+                "size-1.5 sm:size-2 mr-1 rounded-full animate-pulse shrink-0",
                 isError ? "bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,1)]" : "bg-primary shadow-[0_0_8px_rgba(19,236,91,1)]"
               )}></span>
-              <span className="text-white text-[11px] font-bold uppercase tracking-wider feedback-shadow text-center leading-normal">
+              <span className="text-white text-[9px] sm:text-[11px] font-bold uppercase tracking-wider feedback-shadow text-center leading-tight sm:leading-normal">
                 {event.description} {event.type === 'filler' && `(#${count})`}
               </span>
             </div>

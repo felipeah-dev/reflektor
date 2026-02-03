@@ -341,20 +341,20 @@ export default function ResultsPage() {
 
     return (
         <div className="bg-background-dark font-display text-white overflow-x-hidden min-h-screen flex flex-col">
-            <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-surface-dark px-6 lg:px-10 py-4 bg-background-dark z-20 sticky top-0">
+            <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-surface-dark px-4 lg:px-10 py-4 bg-background-dark z-20 sticky top-0">
                 <Link
                     className="hover:opacity-80 transition-opacity"
                     href="/"
                 >
-                    <Logo textSize="text-xl" />
+                    <Logo textSize="text-lg sm:text-xl" />
                 </Link>
 
-                <div className="flex items-center gap-6">
-                    <button className="hidden md:flex cursor-pointer items-center justify-center rounded-lg h-10 px-5 bg-primary hover:bg-[#0fdc50] active:scale-95 transition-all text-background-dark text-sm font-bold leading-normal tracking-[0.015em] shadow-[0_0_15px_rgba(19,236,91,0.2)]">
-                        <span className="material-symbols-outlined mr-2 text-[20px]">
+                <div className="flex items-center gap-3 sm:gap-6">
+                    <button className="hidden sm:flex cursor-pointer items-center justify-center rounded-lg h-9 sm:h-10 px-3 sm:px-5 bg-primary hover:bg-[#0fdc50] active:scale-95 transition-all text-background-dark text-xs sm:text-sm font-bold leading-normal tracking-[0.015em] shadow-[0_0_15px_rgba(19,236,91,0.2)]">
+                        <span className="material-symbols-outlined mr-1 sm:mr-2 text-[18px] sm:text-[20px]">
                             add_circle
                         </span>
-                        <span>New Practice</span>
+                        <span className="hidden xs:inline">New Practice</span>
                     </button>
                     <button className="flex items-center justify-center size-10 rounded-full text-muted hover:text-white hover:bg-surface-dark transition-colors">
                         <span className="material-symbols-outlined !text-[24px]">
@@ -371,8 +371,8 @@ export default function ResultsPage() {
                 </div>
             </header>
             <main className="flex-1 flex flex-col w-full max-w-[1440px] mx-auto px-4 lg:px-10 py-6">
-                <div className="flex flex-col gap-2 mb-6">
-                    <div className="flex flex-wrap gap-2 items-center text-sm">
+                <div className="flex flex-col gap-3 mb-6">
+                    <div className="flex flex-wrap gap-2 items-center text-[10px] sm:text-xs">
                         <Link
                             className="text-muted hover:text-primary transition-colors font-medium"
                             href="/"
@@ -387,18 +387,17 @@ export default function ResultsPage() {
                         <span className="text-white font-medium">Results</span>
                     </div>
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                        <h1 className="text-white tracking-tight text-3xl lg:text-4xl font-bold leading-tight">
+                        <h1 className="text-white tracking-tight text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight">
                             Results: Video with Annotations
                         </h1>
-                        <div className="flex items-center gap-3 text-sm text-muted bg-surface-dark px-4 py-2 rounded-full border border-surface-hover">
-                            <span className="material-symbols-outlined text-lg">
+                        <div className="flex items-center gap-3 text-xs sm:text-sm text-muted bg-surface-dark px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-surface-hover w-fit">
+                            <span className="material-symbols-outlined text-base sm:text-lg">
                                 calendar_today
                             </span>
                             <span>{session ? new Date(session.timestamp).toLocaleDateString() : '24 Oct, 2026'}</span>
                             <span className="w-1 h-1 rounded-full bg-surface-hover"></span>
-                            <span className="material-symbols-outlined text-lg">schedule</span>
+                            <span className="material-symbols-outlined text-base sm:text-lg">schedule</span>
                             <span>{session ? formatDuration(session.duration) : '2m 23s'}</span>
-
                         </div>
                     </div>
                 </div>
@@ -592,56 +591,56 @@ export default function ResultsPage() {
                                 </p>
                             </div>
                         </div>
-                        <div className="bg-surface-dark border border-surface-hover rounded-xl p-5 shadow-lg">
-                            <div className="flex items-center justify-between mb-5">
+                        <div className="bg-surface-dark border border-surface-hover rounded-xl p-4 sm:p-5 shadow-lg">
+                            <div className="flex items-center justify-between mb-4 sm:mb-5">
                                 <div className="flex flex-col">
-                                    <h3 className="text-white text-base font-bold">
+                                    <h3 className="text-white text-sm sm:text-base font-bold">
                                         Analysis Layers
                                     </h3>
-                                    <span className="text-xs text-muted mt-0.5">
+                                    <span className="text-[10px] sm:text-xs text-muted mt-0.5">
                                         Toggle visual overlays
                                     </span>
                                 </div>
-                                <button className="text-xs text-primary hover:text-white transition-colors uppercase font-bold tracking-wider">
+                                <button className="text-[10px] sm:text-xs text-primary hover:text-white transition-colors uppercase font-bold tracking-wider">
                                     View All
                                 </button>
                             </div>
                             {/* Layers List */}
-                            <div className="flex flex-col gap-3">
-                                <label className="group relative flex items-center justify-between p-4 rounded-xl bg-surface-hover/30 border border-primary/40 cursor-pointer hover:bg-surface-hover/50 hover:border-primary/60 transition-all shadow-md">
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex items-center justify-center size-10 rounded-lg bg-primary/10 text-primary border border-primary/20 group-hover:scale-105 transition-transform">
-                                            <span className="material-symbols-outlined">visibility</span>
+                            <div className="flex flex-col gap-2 sm:gap-3">
+                                <label className="group relative flex items-center justify-between p-3 sm:p-4 rounded-xl bg-surface-hover/30 border border-primary/40 cursor-pointer hover:bg-surface-hover/50 hover:border-primary/60 transition-all shadow-md">
+                                    <div className="flex items-center gap-2 sm:gap-3">
+                                        <div className="flex items-center justify-center size-8 sm:size-10 rounded-lg bg-primary/10 text-primary border border-primary/20 group-hover:scale-105 transition-transform">
+                                            <span className="material-symbols-outlined !text-[18px] sm:!text-[24px]">visibility</span>
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className="text-sm font-bold text-white group-hover:text-primary transition-colors">
+                                            <span className="text-xs sm:text-sm font-bold text-white group-hover:text-primary transition-colors">
                                                 Eye Contact
                                             </span>
-                                            <span className="text-[10px] text-primary/80 font-medium tracking-wide flex items-center gap-1">
-                                                <span className="size-1.5 rounded-full bg-primary animate-pulse"></span>{" "}
+                                            <span className="text-[9px] sm:text-[10px] text-primary/80 font-medium tracking-wide flex items-center gap-1">
+                                                <span className="size-1 rounded-full bg-primary animate-pulse"></span>{" "}
                                                 Overlay Active
                                             </span>
                                         </div>
                                     </div>
                                     <div className="relative inline-flex items-center cursor-pointer">
                                         <input defaultChecked type="checkbox" className="sr-only peer" />
-                                        <div className="w-11 h-6 bg-surface-hover peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary shadow-inner"></div>
+                                        <div className="w-9 sm:w-11 h-5 sm:h-6 bg-surface-hover peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 sm:after:h-5 after:w-4 sm:after:w-5 after:transition-all peer-checked:bg-primary shadow-inner"></div>
                                     </div>
                                 </label>
                                 {/* Other toggles simplified */}
-                                <label className="group relative flex items-center justify-between p-4 rounded-xl bg-surface-hover/30 border border-blue-500/40 cursor-pointer hover:bg-surface-hover/50 hover:border-blue-500/60 transition-all shadow-md">
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex items-center justify-center size-10 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 group-hover:scale-105 transition-transform">
-                                            <span className="material-symbols-outlined">graphic_eq</span>
+                                <label className="group relative flex items-center justify-between p-3 sm:p-4 rounded-xl bg-surface-hover/30 border border-blue-500/40 cursor-pointer hover:bg-surface-hover/50 hover:border-blue-500/60 transition-all shadow-md">
+                                    <div className="flex items-center gap-2 sm:gap-3">
+                                        <div className="flex items-center justify-center size-8 sm:size-10 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 group-hover:scale-105 transition-transform">
+                                            <span className="material-symbols-outlined !text-[18px] sm:!text-[24px]">graphic_eq</span>
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">Speech Pace</span>
-                                            <span className="text-[10px] text-blue-400/80 font-medium tracking-wide">Timeline</span>
+                                            <span className="text-xs sm:text-sm font-bold text-white group-hover:text-blue-400 transition-colors">Speech Pace</span>
+                                            <span className="text-[9px] sm:text-[10px] text-blue-400/80 font-medium tracking-wide">Timeline</span>
                                         </div>
                                     </div>
                                     <div className="relative inline-flex items-center cursor-pointer">
                                         <input defaultChecked type="checkbox" className="sr-only peer" />
-                                        <div className="w-11 h-6 bg-surface-hover peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500 shadow-inner"></div>
+                                        <div className="w-9 sm:w-11 h-5 sm:h-6 bg-surface-hover peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 sm:after:h-5 after:w-4 sm:after:w-5 after:transition-all peer-checked:bg-blue-500 shadow-inner"></div>
                                     </div>
                                 </label>
                             </div>
