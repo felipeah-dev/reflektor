@@ -4,12 +4,12 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/components/ui/Logo";
-import { sessionStore } from "@/lib/sessionStore";
+import { sessionStore, SessionData } from "@/lib/sessionStore";
 
 
 export default function ActionPage() {
     const router = useRouter();
-    const [session, setSession] = useState<any>(null);
+    const [session, setSession] = useState<SessionData | null>(null);
 
     useEffect(() => {
         const loadSession = async () => {

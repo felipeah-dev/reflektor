@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { getChatResponse } from "@/lib/chat";
 import { useNetworkQuality } from "@/hooks/useNetworkQuality";
+import { SessionData } from "@/lib/sessionStore";
 
 interface Message {
     role: 'user' | 'model';
@@ -13,7 +14,7 @@ interface Message {
 }
 
 interface ChatCoachProps {
-    sessionData: any;
+    sessionData: SessionData;
 }
 
 export function ChatCoach({ sessionData }: ChatCoachProps) {
@@ -73,8 +74,9 @@ export function ChatCoach({ sessionData }: ChatCoachProps) {
 
             const response = await getChatResponse(userMsg, history, sessionData);
             setMessages(prev => [...prev, { role: 'model', text: response }]);
-        } catch (error: any) {
-            console.error("Chat Error:", error);
+        } catch (error: unknown) {
+            const err = error as Error;
+            console.error("Chat Error:", err);
             const errorText = networkQuality === 'poor'
                 ? "Parece que hay problemas con tu conexión. No he podido procesar tu respuesta, ¿podrías reintentar?"
                 : "Lo siento, tuve un problema conectando con mi cerebro de IA. ¿Podrías intentar de nuevo?";

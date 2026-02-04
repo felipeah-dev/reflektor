@@ -30,7 +30,9 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
         if (!stream || !canvasRef.current) return;
 
         // Initialize Audio Context
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const AudioContextClass = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (!AudioContextClass) return;
+        const audioContext = new AudioContextClass();
         const analyser = audioContext.createAnalyser();
         const source = audioContext.createMediaStreamSource(stream);
 
@@ -129,7 +131,7 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
             if (animationRef.current) cancelAnimationFrame(animationRef.current);
             if (audioContextRef.current) audioContextRef.current.close();
         };
-    }, [stream, barColor, isMuted]);
+    }, [stream, barColor, isMuted, template]);
 
     return (
         <canvas

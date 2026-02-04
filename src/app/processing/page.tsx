@@ -42,10 +42,11 @@ export default function ProcessingPage() {
 
                 setProgress(100);
                 setIsAnalysisComplete(true);
-            } catch (error: any) {
-                console.error("Analysis failed:", error);
+            } catch (error: unknown) {
+                const err = error as Error;
+                console.error("Analysis failed:", err);
 
-                if (error.message?.includes("NETWORK_ERROR")) {
+                if (err.message?.includes("NETWORK_ERROR")) {
                     setStatusMsg("Hubo un problema de conexión. No te preocupes, tu video está guardado localmente. Busca una red más estable e inténtalo de nuevo.");
                     setIsNetworkFailure(true);
                 } else {

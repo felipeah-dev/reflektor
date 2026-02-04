@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { AnalysisEvent, AnalysisSummary } from "./sessionStore";
 
 export async function analyzeVideo(
     videoBlob: Blob,
@@ -239,9 +240,10 @@ export async function analyzeVideo(
                     Return ONLY the JSON object.`
                 ]);
                 break; // If successful, exit the loop
-            } catch (error: any) {
+            } catch (error: unknown) {
                 retryCount++;
-                const isOverloaded = error.message?.includes("503") || error.message?.includes("overloaded") || error.message?.includes("429");
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                const isOverloaded = errorMessage.includes("503") || errorMessage.includes("overloaded") || errorMessage.includes("429");
 
                 if (isOverloaded && retryCount < MAX_RETRIES) {
                     const waitTime = Math.pow(2, retryCount) * 2000;
@@ -272,18 +274,19 @@ export async function analyzeVideo(
 
         // Extract JSON from response (Gemini might wrap it in markdown block)
         const jsonMatch = fullText.match(/\{[\s\S]*\}/);
-        const analysisData = jsonMatch ? JSON.parse(jsonMatch[0]) : { summary: {}, events: [] };
+        const analysisData = jsonMatch ? JSON.parse(jsonMatch[0]) : { summary: {} as AnalysisSummary, events: [] as AnalysisEvent[] };
 
         return analysisData;
 
-    } catch (error: any) {
-        console.error("Gemini Analysis Error:", error);
+    } catch (error: unknown) {
+        const err = error as Error;
+        console.error("Gemini Analysis Error:", err);
 
         // Handle common network errors
-        if (error instanceof TypeError && error.message.includes('fetch')) {
+        if (err instanceof TypeError && err.message.includes('fetch')) {
             throw new Error("NETWORK_ERROR: No se pudo establecer una conexión estable para subir el video. Por favor, revisa tu internet.");
         }
 
-        throw error;
+        throw err;
     }
 }

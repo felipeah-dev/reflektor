@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from 'react';
+import React from 'react';
 import { cn } from "@/lib/utils";
+import { AnalysisEvent } from "@/lib/sessionStore";
 
 interface ResultsCanvasProps {
-  analysisData?: any[];
+  analysisData?: AnalysisEvent[];
   currentTime: number;
 }
 
@@ -20,7 +21,7 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
     return adjustedTime >= event.start && adjustedTime <= event.end;
   });
 
-  const getEventCount = (event: any) => {
+  const getEventCount = (event: AnalysisEvent) => {
     // Count how many events of the same type occurred before or at the same time as this one
     return analysisData
       .filter(e => e.type === event.type && e.start <= event.start)

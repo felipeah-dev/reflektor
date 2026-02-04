@@ -1,11 +1,12 @@
+"use client";
+
 import Link from "next/link";
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense, useCallback } from "react";
 
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { CameraPreview } from "@/components/features/media/CameraPreview";
 import { cn } from "@/lib/utils";
-import { Logo } from "@/components/ui/Logo";
 import { useMediaRecorder } from "@/hooks/useMediaRecorder";
 import { sessionStore } from "@/lib/sessionStore";
 import { AudioVisualizer } from "@/components/features/media/AudioVisualizer";
@@ -35,22 +36,25 @@ function RecordingContent() {
     const [fontSize, setFontSize] = useState(30); // 1-100 range
     const [scrollSpeed, setScrollSpeed] = useState(40); // 1-100 range
     const [scrollOffset, setScrollOffset] = useState(0);
-    const scrollRef = useRef<HTMLDivElement>(null);
     const requestRef = useRef<number | null>(null);
 
-    useEffect(() => {
+    const loadSettings = useCallback(() => {
         const savedScript = localStorage.getItem("reflektor_script") || "";
-        setScriptText(savedScript);
-
         const savedEnabled = localStorage.getItem("reflektor_teleprompter_enabled");
-        if (savedEnabled !== null) setTeleprompterEnabled(savedEnabled === "true");
-
         const savedFontSize = localStorage.getItem("reflektor_teleprompter_font_size");
-        if (savedFontSize) setFontSize(parseInt(savedFontSize));
-
         const savedScrollSpeed = localStorage.getItem("reflektor_teleprompter_scroll_speed");
+
+        setScriptText(savedScript);
+        if (savedEnabled !== null) setTeleprompterEnabled(savedEnabled === "true");
+        if (savedFontSize) setFontSize(parseInt(savedFontSize));
         if (savedScrollSpeed) setScrollSpeed(parseInt(savedScrollSpeed));
     }, []);
+
+    useEffect(() => {
+        // Use setTimeout to defer state updates and avoid "setState in effect" warning
+        const timer = setTimeout(loadSettings, 0);
+        return () => clearTimeout(timer);
+    }, [loadSettings]);
 
     useEffect(() => {
         if (status !== 'recording') return;

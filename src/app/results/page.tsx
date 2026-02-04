@@ -8,7 +8,7 @@ import ResultsCanvas from "@/components/features/media/ResultsCanvas";
 import { Logo } from "@/components/ui/Logo";
 import { cn } from "@/lib/utils";
 import { ChatCoach } from "@/components/features/media/ChatCoach";
-import { sessionStore } from "@/lib/sessionStore";
+import { sessionStore, SessionData, AnalysisEvent } from "@/lib/sessionStore";
 import { useNetworkQuality } from "@/hooks/useNetworkQuality";
 
 
@@ -18,7 +18,7 @@ import { useNetworkQuality } from "@/hooks/useNetworkQuality";
 
 export default function ResultsPage() {
     const router = useRouter();
-    const [session, setSession] = useState<any>(null);
+    const [session, setSession] = useState<SessionData | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
@@ -77,8 +77,9 @@ export default function ResultsPage() {
         const stream = canvas.captureStream(30);
 
         // 2. Setup Audio Capture properly
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        await audioContext.resume(); // Ensure it's active after user gesture
+        const AudioContextClass = (window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext);
+        if (!AudioContextClass) throw new Error("AudioContext not supported");
+        const audioContext = new AudioContextClass();
         const dest = audioContext.createMediaStreamDestination();
         const source = audioContext.createMediaElementSource(hiddenVideo);
 
@@ -128,9 +129,9 @@ export default function ResultsPage() {
             // Draw Overlays - EXACTLY MATCH PREVIEW DESIGN
             const currentTime = hiddenVideo.currentTime;
             const events = session.analysis?.events || [];
-            const activeEvents = events.filter((e: any) => currentTime >= e.start && currentTime <= e.end);
+            const activeEvents = events.filter((e: AnalysisEvent) => currentTime >= e.start && currentTime <= e.end);
 
-            activeEvents.forEach((event: any) => {
+            activeEvents.forEach((event: AnalysisEvent) => {
                 if (!event.box_2d) return;
                 const [ymin, xmin, ymax, xmax] = event.box_2d;
                 const x = (xmin / 1000) * canvas.width;
@@ -156,7 +157,7 @@ export default function ResultsPage() {
                 ctx.stroke();
 
                 // --- Draw Feedback Pill with wrapping logic ---
-                const count = events.filter((e: any) => e.type === event.type && e.start <= event.start).length;
+                const count = events.filter((e: AnalysisEvent) => e.type === event.type && e.start <= event.start).length;
                 const labelText = `${event.description}${event.type === 'filler' ? ` (#${count})` : ''}`.toUpperCase();
 
                 const fontSize = Math.max(11, 13 * scale);
@@ -466,7 +467,7 @@ export default function ResultsPage() {
                                         style={{ width: `${(currentTime / (videoDuration || 1)) * 100}%` }}
                                     ></div>
                                     {/* Markers - DYNAMIC from Analysis */}
-                                    {(session?.analysis?.events || []).map((event: any, idx: number) => {
+                                    {(session?.analysis?.events || []).map((event: AnalysisEvent, idx: number) => {
                                         const isWarning = event.type === 'filler' ||
                                             event.type === 'spatial_warning' ||
                                             event.type === 'pace_issue';
@@ -663,7 +664,7 @@ export default function ResultsPage() {
                             </div>
                             <div className="overflow-y-auto p-4 flex-1 scrollbar-hide">
                                 <div className="grid grid-cols-[32px_1fr] gap-y-3">
-                                    {(session?.analysis?.events || []).map((event: any, idx: number) => {
+                                    {(session?.analysis?.events || []).map((event: AnalysisEvent, idx: number) => {
                                         const isWarning = event.type === 'filler' ||
                                             event.type === 'spatial_warning' ||
                                             event.type === 'pace_issue' ||
@@ -678,7 +679,7 @@ export default function ResultsPage() {
                                                     )}>
                                                         {isWarning ? 'error' : 'check_circle'}
                                                     </span>
-                                                    {idx < (session.analysis.events.length - 1) && (
+                                                    {session && session.analysis && idx < (session.analysis.events.length - 1) && (
                                                         <div className="w-[1px] bg-surface-hover h-full min-h-[40px] grow"></div>
                                                     )}
                                                 </div>

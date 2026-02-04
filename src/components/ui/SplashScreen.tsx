@@ -13,8 +13,10 @@ export function SplashScreen() {
         const splashShown = sessionStorage.getItem("splashShown");
 
         if (splashShown) {
-            setIsVisible(false);
-            setHasShown(true);
+            setTimeout(() => {
+                setIsVisible(false);
+                setHasShown(true);
+            }, 0);
             return;
         }
 

@@ -1,14 +1,35 @@
 // Simple IndexedDB wrapper for session data
 // Persists the video blob and metadata across page refreshes
 
-type SessionData = {
+export interface AnalysisEvent {
+    type: string;
+    start: number;
+    end: number;
+    description: string;
+    severity?: 'low' | 'medium' | 'high';
+    box_2d?: [number, number, number, number];
+}
+
+export interface AnalysisSummary {
+    score: number;
+    pace: number;
+    sentiment: string;
+    eyeContact: number;
+    clarity: number;
+    overallFeedback: string;
+}
+
+export interface SessionData {
     videoBlob: Blob;
-    videoUrl?: string; // We'll regenerate this on load
+    videoUrl?: string;
     duration: number;
     timestamp: number;
-    analysis?: any; // Store Gemini analysis results (summary + events)
-    scenario?: string; // The practice context (sales, pitch, speaking)
-};
+    analysis?: {
+        summary: AnalysisSummary;
+        events: AnalysisEvent[];
+    };
+    scenario?: string;
+}
 
 const DB_NAME = "ReflektorSessions";
 const STORE_NAME = "sessions";
@@ -37,7 +58,7 @@ function getDB(): Promise<IDBDatabase> {
 }
 
 export const sessionStore = {
-    async setSession(data: { videoBlob: Blob; duration: number; timestamp: number; analysis?: any; scenario?: string }) {
+    async setSession(data: Omit<SessionData, 'videoUrl'>) {
         const db = await getDB();
         const tx = db.transaction(STORE_NAME, "readwrite");
         const store = tx.objectStore(STORE_NAME);
@@ -48,7 +69,7 @@ export const sessionStore = {
             videoBlob: data.videoBlob,
             duration: data.duration,
             timestamp: data.timestamp,
-            analysis: (data as any).analysis || [],
+            analysis: data.analysis || { summary: {} as AnalysisSummary, events: [] },
             scenario: data.scenario
         }, 'current');
 

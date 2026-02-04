@@ -2,6 +2,12 @@ import { useState, useEffect } from 'react';
 
 export type NetworkQuality = 'good' | 'poor' | 'offline';
 
+interface NetworkInformation extends EventTarget {
+    readonly effectiveType: 'slow-2g' | '2g' | '3g' | '4g';
+    readonly saveData: boolean;
+    onchange: EventListener;
+}
+
 export function useNetworkQuality() {
     const [quality, setQuality] = useState<NetworkQuality>('good');
 
@@ -37,7 +43,7 @@ export function useNetworkQuality() {
                 return;
             }
 
-            const conn = (navigator as any).connection;
+            const conn = (navigator as Navigator & { connection?: NetworkInformation }).connection;
             if (conn) {
                 if (conn.effectiveType === 'slow-2g' || conn.effectiveType === '2g' || conn.effectiveType === '3g') {
                     setQuality('poor');
@@ -56,7 +62,7 @@ export function useNetworkQuality() {
         window.addEventListener('online', updateStatus);
         window.addEventListener('offline', updateStatus);
 
-        const conn = (navigator as any).connection;
+        const conn = (navigator as Navigator & { connection?: NetworkInformation }).connection;
         if (conn) {
             conn.addEventListener('change', updateStatus);
         }

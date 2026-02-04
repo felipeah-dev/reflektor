@@ -1,9 +1,10 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { SessionData } from "./sessionStore";
 
 export async function getChatResponse(
     message: string,
     history: { role: 'user' | 'model', parts: { text: string }[] }[],
-    sessionData: any
+    sessionData: SessionData
 ) {
     try {
         const tokenResponse = await fetch('/api/gemini/token');
@@ -11,8 +12,11 @@ export async function getChatResponse(
         const genAI = new GoogleGenerativeAI(token);
 
         const scenario = sessionData.scenario || "custom";
-        const analysis = sessionData.analysis || {};
-        const summary = analysis.summary || {};
+        const analysis = sessionData.analysis || {
+            summary: { score: 0, pace: 0, sentiment: 'neutral', eyeContact: 0, clarity: 0, overallFeedback: '' },
+            events: []
+        };
+        const summary = analysis.summary || { score: 0, pace: 0, sentiment: 'neutral' as const, eyeContact: 0, clarity: 0, overallFeedback: '' };
         const events = analysis.events || [];
 
         const systemInstruction = `Eres "Expert Coach", un mentor experto en ${scenario}.
@@ -57,9 +61,10 @@ export async function getChatResponse(
                 const result = await chat.sendMessage(message);
                 const response = await result.response;
                 return response.text();
-            } catch (error: any) {
+            } catch (error: unknown) {
                 retryCount++;
-                const isOverloaded = error.message?.includes("503") || error.message?.includes("overloaded") || error.message?.includes("429");
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                const isOverloaded = errorMessage.includes("503") || errorMessage.includes("overloaded") || errorMessage.includes("429");
 
                 if (retryCount < MAX_RETRIES && (isOverloaded || modelName === "gemini-3-flash-preview")) {
                     console.warn(`Chat model ${modelName} failed or busy. Switching to fallback...`);

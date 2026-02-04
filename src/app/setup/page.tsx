@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, Suspense, useRef } from "react";
+import { useState, useEffect, Suspense, useRef, useCallback } from "react";
 import { CameraPreview } from "@/components/features/media/CameraPreview";
 import { AudioVisualizer } from "@/components/features/media/AudioVisualizer";
 import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Logo } from "@/components/ui/Logo";
 
 
 function SetupContent() {
@@ -33,24 +32,27 @@ function SetupContent() {
 
     const isReady = hasCameraPermission === true && hasMicPermission === true;
 
-    useEffect(() => {
+    const loadSettings = useCallback(() => {
         try {
             // Load persist script
             const savedScript = localStorage.getItem("reflektor_script");
-            if (savedScript) setScriptText(savedScript);
-
             const savedPromptEnabled = localStorage.getItem("reflektor_teleprompter_enabled");
-            if (savedPromptEnabled !== null) setTeleprompterEnabled(savedPromptEnabled === "true");
-
             const savedFontSize = localStorage.getItem("reflektor_teleprompter_font_size");
-            if (savedFontSize) setFontSize(parseInt(savedFontSize));
-
             const savedScrollSpeed = localStorage.getItem("reflektor_teleprompter_scroll_speed");
+
+            if (savedScript) setScriptText(savedScript);
+            if (savedPromptEnabled !== null) setTeleprompterEnabled(savedPromptEnabled === "true");
+            if (savedFontSize) setFontSize(parseInt(savedFontSize));
             if (savedScrollSpeed) setScrollSpeed(parseInt(savedScrollSpeed));
         } catch (e) {
             console.warn("Storage access failed:", e);
         }
     }, []);
+
+    useEffect(() => {
+        const timer = setTimeout(loadSettings, 0);
+        return () => clearTimeout(timer);
+    }, [loadSettings]);
 
     useEffect(() => {
         try {
@@ -73,8 +75,10 @@ function SetupContent() {
             };
             previewRequestRef.current = requestAnimationFrame(animate);
         } else {
-            setPreviewOffset(0);
+            // Wrap in setTimeout to avoid synchronous setState in effect
+            const timer = setTimeout(() => setPreviewOffset(0), 0);
             if (previewRequestRef.current) cancelAnimationFrame(previewRequestRef.current);
+            return () => clearTimeout(timer);
         }
         return () => {
             if (previewRequestRef.current) cancelAnimationFrame(previewRequestRef.current);
