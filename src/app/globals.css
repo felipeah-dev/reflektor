@@ -58,6 +58,24 @@ body {
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
+/* Pseudo-Fullscreen for Mobile */
+.is-pseudo-fullscreen {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 9999 !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  background: black !important;
+}
+
+.is-pseudo-fullscreen video {
+  height: 100% !important;
+  max-height: none !important;
+}
+
 
 /* Layout container - empty to allow Tailwind utilities only */
 .layout-container {

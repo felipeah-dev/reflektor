@@ -25,6 +25,7 @@ export default function ResultsPage() {
     const [videoDuration, setVideoDuration] = useState(0);
     const [isMuted, setIsMuted] = useState(false);
     const videoContainerRef = useRef<HTMLDivElement>(null);
+    const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false);
     const requestRef = useRef<number | null>(null);
     const [isExporting, setIsExporting] = useState(false);
     const [exportProgress, setExportProgress] = useState(0);
@@ -91,8 +92,20 @@ export default function ResultsPage() {
             ...dest.stream.getAudioTracks()
         ]);
 
+        // Detect supported mime type
+        const supportedTypes = [
+            'video/webm;codecs=vp9,opus',
+            'video/webm;codecs=vp8,opus',
+            'video/webm',
+            'video/mp4;codecs=h264',
+            'video/mp4',
+            'video/quicktime'
+        ];
+        const mimeType = supportedTypes.find(type => MediaRecorder.isTypeSupported(type)) || 'video/webm';
+        const extension = mimeType.includes('mp4') || mimeType.includes('quicktime') ? 'mp4' : 'webm';
+
         const recorder = new MediaRecorder(combinedStream, {
-            mimeType: 'video/webm;codecs=vp9',
+            mimeType: mimeType,
             videoBitsPerSecond: 12000000 // Ultra high quality
         });
 
@@ -102,11 +115,11 @@ export default function ResultsPage() {
         };
 
         recorder.onstop = () => {
-            const blob = new Blob(chunks, { type: 'video/webm' });
+            const blob = new Blob(chunks, { type: mimeType });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `reflektor-feedback-${Date.now()}.webm`;
+            a.download = `reflektor-feedback-${Date.now()}.${extension}`;
             a.click();
 
             // Clean up
@@ -322,12 +335,52 @@ export default function ResultsPage() {
 
     const toggleFullscreen = () => {
         if (!videoContainerRef.current) return;
+
+        // Detect if we are on a mobile device (iPhone/Android)
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+        if (isMobile) {
+            setIsPseudoFullscreen(!isPseudoFullscreen);
+            // If exiting pseudo-fullscreen, also ensure we exit real fullscreen if it was active
+            if (isPseudoFullscreen && document.fullscreenElement) {
+                document.exitFullscreen().catch(() => { });
+            }
+            return;
+        }
+
         if (!document.fullscreenElement) {
-            videoContainerRef.current.requestFullscreen();
+            videoContainerRef.current.requestFullscreen().catch(() => {
+                // Fallback to pseudo-fullscreen if request fails
+                setIsPseudoFullscreen(true);
+            });
         } else {
-            document.exitFullscreen();
+            document.exitFullscreen().catch(() => {
+                setIsPseudoFullscreen(false);
+            });
         }
     };
+
+    // Listen for escape key to exit pseudo-fullscreen
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && isPseudoFullscreen) {
+                setIsPseudoFullscreen(false);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isPseudoFullscreen]);
+
+    // Synchronize real fullscreen exit with pseudo state
+    useEffect(() => {
+        const handleFsChange = () => {
+            if (!document.fullscreenElement) {
+                setIsPseudoFullscreen(false);
+            }
+        };
+        document.addEventListener('fullscreenchange', handleFsChange);
+        return () => document.removeEventListener('fullscreenchange', handleFsChange);
+    }, []);
 
     const formatTimeFull = (timeInSeconds: number) => {
         const t = isNaN(timeInSeconds) ? 0 : timeInSeconds;
@@ -411,34 +464,46 @@ export default function ResultsPage() {
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full min-h-[600px]">
                     <div className="lg:col-span-8 flex flex-col gap-4">
-                        <div ref={videoContainerRef} className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-surface-dark group shadow-2xl">
-                            {/* Dynamic Canvas Layer or Real Video */}
-                            {session?.videoUrl ? (
-                                <>
-                                    <video
-                                        ref={videoRef}
-                                        src={session.videoUrl}
-                                        className="w-full h-full object-contain"
-                                        onPlay={() => setIsPlaying(true)}
-                                        onPause={() => setIsPlaying(false)}
-                                        onTimeUpdate={handleTimeUpdate}
-                                        onLoadedMetadata={handleLoadedMetadata}
-                                        muted={isMuted}
-                                        onClick={togglePlay}
-                                    />
-                                    {/* Overlay Layer */}
-                                    <div className="absolute inset-0 pointer-events-none z-20">
-                                        <ResultsCanvas
-                                            analysisData={session.analysis?.events || []}
-                                            currentTime={currentTime}
-                                        />
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="absolute inset-0 z-0">
-                                    <ResultsCanvas currentTime={0} />
-                                </div>
+                        <div
+                            ref={videoContainerRef}
+                            className={cn(
+                                "relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-surface-dark group shadow-2xl transition-all",
+                                isPseudoFullscreen && "is-pseudo-fullscreen"
                             )}
+                        >
+                            <div className="w-full h-full flex items-center justify-center">
+                                <div className="relative aspect-video w-full max-h-full">
+                                    {/* Dynamic Canvas Layer or Real Video */}
+                                    {session?.videoUrl ? (
+                                        <>
+                                            <video
+                                                ref={videoRef}
+                                                src={session.videoUrl}
+                                                className="w-full h-full object-contain"
+                                                onPlay={() => setIsPlaying(true)}
+                                                onPause={() => setIsPlaying(false)}
+                                                onTimeUpdate={handleTimeUpdate}
+                                                onLoadedMetadata={handleLoadedMetadata}
+                                                muted={isMuted}
+                                                onClick={togglePlay}
+                                                playsInline
+                                                webkit-playsinline="true"
+                                            />
+                                            {/* Overlay Layer */}
+                                            <div className="absolute inset-0 pointer-events-none z-20">
+                                                <ResultsCanvas
+                                                    analysisData={session.analysis?.events || []}
+                                                    currentTime={currentTime}
+                                                />
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="absolute inset-0 z-0">
+                                            <ResultsCanvas currentTime={0} />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
 
                             <div className={cn(
                                 "absolute inset-0 flex items-center justify-center pointer-events-none transition-all duration-300 z-10",
