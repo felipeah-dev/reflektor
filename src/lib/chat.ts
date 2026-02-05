@@ -1,4 +1,3 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { SessionData } from "./sessionStore";
 
 export async function getChatResponse(
@@ -7,10 +6,6 @@ export async function getChatResponse(
     sessionData: SessionData
 ) {
     try {
-        const tokenResponse = await fetch('/api/gemini/token');
-        const { token } = await tokenResponse.json();
-        const genAI = new GoogleGenerativeAI(token);
-
         const scenario = sessionData.scenario || "custom";
         const analysis = sessionData.analysis || {
             summary: { score: 0, pace: 0, sentiment: 'neutral', eyeContact: 0, clarity: 0, overallFeedback: '' },
@@ -43,40 +38,23 @@ export async function getChatResponse(
         4. **Idioma**: Responde siempre en el idioma del usuario (detectado como ${summary.sentiment ? 'Español/Inglés' : 'Español'}).
         `;
 
-        let modelName = "gemini-3-flash-preview";
-        let retryCount = 0;
-        const MAX_RETRIES = 2;
+        const response = await fetch('/api/gemini/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message,
+                history,
+                systemInstruction
+            }),
+        });
 
-        while (retryCount < MAX_RETRIES) {
-            try {
-                const model = genAI.getGenerativeModel({
-                    model: modelName,
-                    systemInstruction: systemInstruction,
-                });
-
-                const chat = model.startChat({
-                    history: history,
-                });
-
-                const result = await chat.sendMessage(message);
-                const response = await result.response;
-                return response.text();
-            } catch (error: unknown) {
-                retryCount++;
-                const errorMessage = error instanceof Error ? error.message : String(error);
-                const isOverloaded = errorMessage.includes("503") || errorMessage.includes("overloaded") || errorMessage.includes("429");
-
-                if (retryCount < MAX_RETRIES && (isOverloaded || modelName === "gemini-3-flash-preview")) {
-                    console.warn(`Chat model ${modelName} failed or busy. Switching to fallback...`);
-                    modelName = "gemini-1.5-flash-latest"; // Reliable fallback
-                    continue;
-                } else {
-                    throw error;
-                }
-            }
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to get chat response');
         }
 
-        throw new Error("Chat failed after model fallbacks.");
+        const data = await response.json();
+        return data.text;
 
     } catch (error) {
         console.error("ChatCoach Error:", error);

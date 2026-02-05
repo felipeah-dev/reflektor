@@ -1,6 +1,3 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { AnalysisEvent, AnalysisSummary } from "./sessionStore";
-
 export async function analyzeVideo(
     videoBlob: Blob,
     onStatusUpdate: (msg: string) => void,
@@ -8,11 +5,7 @@ export async function analyzeVideo(
     totalDuration?: number
 ) {
     try {
-        onStatusUpdate("Obtaining secure connection token...");
-        const tokenResponse = await fetch('/api/gemini/token');
-        const { token } = await tokenResponse.json();
-
-        const genAI = new GoogleGenerativeAI(token);
+        onStatusUpdate("Preparing video for secure analysis...");
 
         let contextInstruction = "";
         switch (scenario) {
@@ -179,104 +172,25 @@ export async function analyzeVideo(
     ✗ Generic feedback like "improve eye contact" without context
     ✗ Marking brief, natural pauses as problems`;
 
-        // Convert Blob to Base64 (Proof of concept for Hackathon - for larger files, use Files API)
-        const base64Video = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const result = reader.result as string;
-                // Find the index of the base64 data start
-                // Data URLs format: "data:[<mediatype>][;base64],<data>"
-                // Some mediatypes (like video/webm;codecs=vp9,opus) contain commas.
-                // The base64 data is always after the LAST comma before the data itself.
-                const base64Marker = ";base64,";
-                const index = result.indexOf(base64Marker);
-                if (index !== -1) {
-                    resolve(result.substring(index + base64Marker.length));
-                } else {
-                    // Fallback to simpler split if marker not found
-                    const lastComma = result.lastIndexOf(',');
-                    if (lastComma !== -1) {
-                        resolve(result.substring(lastComma + 1));
-                    } else {
-                        reject(new Error("Failed to parse base64 data from video blob"));
-                    }
-                }
-            };
-            reader.onerror = () => reject(new Error("FileReader error"));
-            reader.readAsDataURL(videoBlob);
+        onStatusUpdate("Uploading video for server-side analysis...");
+
+        const formData = new FormData();
+        formData.append('video', videoBlob);
+        formData.append('scenario', scenario);
+        if (totalDuration) formData.append('totalDuration', totalDuration.toString());
+        formData.append('systemInstruction', systemInstruction);
+
+        const response = await fetch('/api/gemini/analyze', {
+            method: 'POST',
+            body: formData,
         });
 
-        onStatusUpdate("Analyzing multimodal data with Gemini 3 Flash...");
-
-        let modelName = "gemini-3-flash-preview";
-        let result;
-        let retryCount = 0;
-        const MAX_RETRIES = 3;
-
-        while (retryCount < MAX_RETRIES) {
-            try {
-                const model = genAI.getGenerativeModel({
-                    model: modelName,
-                    systemInstruction: systemInstruction
-                });
-
-                const durationPrompt = totalDuration
-                    ? `The video is exactly ${totalDuration} seconds long. Ensure all timestamps in "start" and "end" are within 0 and ${totalDuration}.`
-                    : "";
-
-                result = await model.generateContentStream([
-                    {
-                        inlineData: {
-                            mimeType: videoBlob.type,
-                            data: base64Video,
-                        }
-                    },
-                    `Analyze this ${scenario} session. 
-                    ${durationPrompt}
-                    1) Detect the primary language. 
-                    2) Identify specific moments of eye contact loss or gestures. 
-                    3) Detect REAL filler words (fillers/muletillas) with high precision.
-                    4) Provide coaching advice SPECIFIC to the ${scenario} context provided in system instructions.
-                    Return ONLY the JSON object.`
-                ]);
-                break; // If successful, exit the loop
-            } catch (error: unknown) {
-                retryCount++;
-                const errorMessage = error instanceof Error ? error.message : String(error);
-                const isOverloaded = errorMessage.includes("503") || errorMessage.includes("overloaded") || errorMessage.includes("429");
-
-                if (isOverloaded && retryCount < MAX_RETRIES) {
-                    const waitTime = Math.pow(2, retryCount) * 2000;
-                    onStatusUpdate(`Model busy or quota reached. Retrying in ${waitTime / 1000}s... (Attempt ${retryCount}/${MAX_RETRIES})`);
-                    await new Promise(resolve => setTimeout(resolve, waitTime));
-
-                    // On last retry, try gemini-2.5-flash-latest as fallback for stability
-                    if (retryCount === MAX_RETRIES - 1) {
-                        modelName = "gemini-2.5-flash-latest";
-                        onStatusUpdate("Switching to Gemini 2.5 fallback (stability mode)...");
-                    }
-                } else {
-                    console.error("Gemini Critical Error:", error);
-                    throw error;
-                }
-            }
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to analyze video');
         }
 
-        if (!result) throw new Error("Failed to initialize analysis stream after retries.");
-
-        let fullText = "";
-        for await (const chunk of result.stream) {
-            const chunkText = chunk.text();
-            fullText += chunkText;
-            // Optionally update UI with partial reasoning or progress
-            onStatusUpdate(`Processing analysis stream... (${fullText.length} chars)`);
-        }
-
-        // Extract JSON from response (Gemini might wrap it in markdown block)
-        const jsonMatch = fullText.match(/\{[\s\S]*\}/);
-        const analysisData = jsonMatch ? JSON.parse(jsonMatch[0]) : { summary: {} as AnalysisSummary, events: [] as AnalysisEvent[] };
-
-        return analysisData;
+        return await response.json();
 
     } catch (error: unknown) {
         const err = error as Error;
