@@ -1,8 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { rateLimit } from '@/lib/rateLimit';
+
+// Rate Limiter: 20 messages per minute per IP
+const limiter = rateLimit({
+    interval: 60 * 1000, // 1 minute
+    uniqueTokenPerInterval: 500,
+    limit: 20,
+});
 
 export async function POST(req: NextRequest) {
     try {
+        // 1. Rate Limiting Check
+        const ip = req.headers.get('x-forwarded-for') ?? 'anonymous';
+        try {
+            await limiter.check(20, ip);
+        } catch {
+            return NextResponse.json(
+                { error: 'Rate limit exceeded. Too many messages.' },
+                { status: 429 }
+            );
+        }
+
         const apiKey = process.env.GOOGLE_API_KEY;
         if (!apiKey) {
             return NextResponse.json({ error: 'GOOGLE_API_KEY not configured' }, { status: 500 });

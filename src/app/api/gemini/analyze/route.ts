@@ -1,8 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { rateLimit } from '@/lib/rateLimit';
+
+// Rate Limiter: 10 requests per hour per IP
+const limiter = rateLimit({
+    interval: 60 * 60 * 1000, // 1 hour
+    uniqueTokenPerInterval: 500, // Max 500 unique IPs tracked per hour
+    limit: 10,
+});
 
 export async function POST(req: NextRequest) {
     try {
+        // 1. Rate Limiting Check
+        const ip = req.headers.get('x-forwarded-for') ?? 'anonymous';
+        try {
+            await limiter.check(10, ip);
+        } catch {
+            return NextResponse.json(
+                { error: 'Rate limit exceeded. Please try again in an hour.' },
+                { status: 429 }
+            );
+        }
+
         const apiKey = process.env.GOOGLE_API_KEY;
         if (!apiKey) {
             return NextResponse.json({ error: 'GOOGLE_API_KEY not configured' }, { status: 500 });
@@ -16,6 +35,24 @@ export async function POST(req: NextRequest) {
 
         if (!videoFile) {
             return NextResponse.json({ error: 'No video file provided' }, { status: 400 });
+        }
+
+        // 2. Security Validation: File Size & Type
+        const MAX_SIZE_MB = 500;
+        const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
+
+        if (videoFile.size > MAX_SIZE_BYTES) {
+            return NextResponse.json(
+                { error: `File too large. Maximum size is ${MAX_SIZE_MB}MB.` },
+                { status: 400 }
+            );
+        }
+
+        if (!videoFile.type.startsWith('video/') && !videoFile.type.startsWith('audio/')) {
+            return NextResponse.json(
+                { error: 'Invalid file type. Only video and audio files are allowed.' },
+                { status: 400 }
+            );
         }
 
         const genAI = new GoogleGenerativeAI(apiKey);
