@@ -10,10 +10,8 @@ interface ResultsCanvasProps {
 }
 
 const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], currentTime }) => {
-  // Use a small offset for synchronization if needed. 
-  // Gemini detection usually has a slight latency compared to the video frame.
-  // We'll use 0.1s for now, but this can be tuned.
-  const syncOffset = 0.1;
+  // Precision Tuning: slightly reduced offset to feel more "snappy"
+  const syncOffset = 0.05;
   const adjustedTime = currentTime + syncOffset;
 
   // Filter events that should be active at the current adjusted time
@@ -22,21 +20,19 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
   });
 
   const getEventCount = (event: AnalysisEvent) => {
-    // Count how many events of the same type occurred before or at the same time as this one
     return analysisData
       .filter(e => e.type === event.type && e.start <= event.start)
       .length;
   };
 
   return (
-    <div className="relative w-full h-full rounded-xl">
+    <div className="relative w-full h-full rounded-xl select-none">
       {activeEvents.map((event, index) => {
         if (!event.box_2d || event.box_2d.length !== 4) return null;
 
-        // Gemini: [y_min, x_min, y_max, x_max] (0-1000)
         const [ymin, xmin, ymax, xmax] = event.box_2d;
 
-        const top = ymin / 10; // Convert 0-1000 to 0-100%
+        const top = ymin / 10;
         const left = xmin / 10;
         const width = (xmax - xmin) / 10;
         const height = (ymax - ymin) / 10;
@@ -49,37 +45,63 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
 
         const count = getEventCount(event);
 
-        // Responsive positioning logic
-        const pillAbove = top > 15; // If top is less than 15%, show below the box
-        const verticalPos = pillAbove ? "bottom-[calc(100%+8px)]" : "top-[calc(100%+8px)]";
+        // --- Smart Responsiveness Logic ---
+
+        // 1. Vertical Positioning:
+        // If box is too high (< 15% from top), push pill DOWN.
+        const pillAbove = top > 15;
+        const verticalClass = pillAbove ? "bottom-full mb-2" : "top-full mt-2";
+
+        // 2. Horizontal Anchoring:
+        // If box is too far left (< 20%), anchor Left.
+        // If box is too far right (> 80%), anchor Right.
+        // Else, Center.
+        const centerPoint = left + (width / 2);
+        let horizontalClass = "left-1/2 -translate-x-1/2"; // Default Center
+        if (centerPoint < 20) horizontalClass = "left-0 translate-x-0";
+        else if (centerPoint > 80) horizontalClass = "right-0 translate-x-0";
+
+        // 3. Dynamic Scaling for Box:
+        // Use container query-like relative units for borders
+        const borderWidth = "clamp(2px, 0.4vw, 4px)";
+        const borderRadius = "clamp(8px, 2vw, 24px)";
 
         return (
           <div
             key={`${index}-${event.start}`}
             className={cn(
-              "absolute border-2 rounded-3xl pointer-events-none transition-all duration-300",
+              "absolute pointer-events-none transition-all duration-200 ease-out", // Faster transition for "precision" feel
               isError
-                ? "border-yellow-500/40 animate-soft-pulse-yellow"
-                : "border-primary/60 animate-soft-pulse"
+                ? "border-yellow-500/60 shadow-[0_0_15px_rgba(234,179,8,0.3)] animate-soft-pulse-yellow"
+                : "border-primary/70 shadow-[0_0_15px_rgba(19,236,91,0.3)] animate-soft-pulse"
             )}
             style={{
               top: `${top}%`,
               left: `${left}%`,
               width: `${width}%`,
               height: `${height}%`,
+              borderWidth: borderWidth,
+              borderRadius: borderRadius,
+              borderStyle: 'solid'
             }}
           >
-            {/* Floating Feedback Pill - Optimized for responsivity */}
+            {/* Box Corner Accents for "Tech/Precision" feel */}
+            <div className={cn("absolute size-2 rounded-full opacity-0 sm:opacity-100 transition-opacity", isError ? "bg-yellow-500" : "bg-primary")} style={{ top: '-1px', left: '-1px' }}></div>
+            <div className={cn("absolute size-2 rounded-full opacity-0 sm:opacity-100 transition-opacity", isError ? "bg-yellow-500" : "bg-primary")} style={{ bottom: '-1px', right: '-1px' }}></div>
+
+            {/* Smart Floating Pill */}
             <div className={cn(
-              "absolute left-1/2 -translate-x-1/2 glass-pill flex items-center gap-2 z-30",
-              "w-max max-w-[180px] sm:max-w-[280px] !rounded-xl py-1.5 px-3 sm:py-2.5 sm:px-4",
-              verticalPos
+              "absolute flex items-center gap-2 z-30 whitespace-nowrap",
+              "glass-pill w-max max-w-[200px] sm:max-w-none", // Allow more width on desktop
+              "px-3 py-1.5 sm:px-4 sm:py-2",
+              verticalClass,
+              horizontalClass
             )}>
               <span className={cn(
-                "size-1.5 sm:size-2 mr-1 rounded-full animate-pulse shrink-0",
+                "size-1.5 sm:size-2 rounded-full animate-pulse shrink-0",
                 isError ? "bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,1)]" : "bg-primary shadow-[0_0_8px_rgba(19,236,91,1)]"
               )}></span>
-              <span className="text-white text-[9px] sm:text-[11px] font-bold uppercase tracking-wider feedback-shadow text-center leading-tight sm:leading-normal">
+              <span className="text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider feedback-shadow">
                 {event.description} {event.type === 'filler' && `(#${count})`}
               </span>
             </div>
@@ -87,7 +109,6 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
         );
       })}
     </div>
-
   );
 };
 

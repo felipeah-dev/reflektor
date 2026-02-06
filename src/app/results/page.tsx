@@ -26,6 +26,7 @@ export default function ResultsPage() {
     const [isMuted, setIsMuted] = useState(false);
     const videoContainerRef = useRef<HTMLDivElement>(null);
     const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false);
+    const [isVertical, setIsVertical] = useState(false);
     const requestRef = useRef<number | null>(null);
     const [isExporting, setIsExporting] = useState(false);
     const [exportProgress, setExportProgress] = useState(0);
@@ -294,6 +295,16 @@ export default function ResultsPage() {
     const handleLoadedMetadata = () => {
         if (videoRef.current) {
             let duration = videoRef.current.duration;
+            const width = videoRef.current.videoWidth;
+            const height = videoRef.current.videoHeight;
+
+            // Detect vertical video
+            if (height > width) {
+                setIsVertical(true);
+            } else {
+                setIsVertical(false);
+            }
+
             // Handle Infinity duration often found in WebM blobs
             if (duration === Infinity && session?.duration) {
                 duration = session.duration;
@@ -467,7 +478,8 @@ export default function ResultsPage() {
                         <div
                             ref={videoContainerRef}
                             className={cn(
-                                "relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-surface-dark group shadow-2xl transition-all",
+                                "relative w-full bg-black rounded-xl overflow-hidden border border-surface-dark group shadow-2xl transition-all mx-auto",
+                                isVertical ? "aspect-[9/16] max-h-[85vh] max-w-[500px]" : "aspect-video",
                                 isPseudoFullscreen && "is-pseudo-fullscreen"
                             )}
                         >
