@@ -1,8 +1,17 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { SplashScreen } from "@/components/ui/SplashScreen";
 
 const baseUrl = "https://reflektor.vercel.app";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  // This is critical for iOS keyboard handling
+  interactiveWidget: "resizes-content",
+};
 
 export const metadata: Metadata = {
   title: "REFLEKTOR AI | Advanced Public Speaking Coach",

@@ -37,6 +37,29 @@ export function ChatCoach({ sessionData }: ChatCoachProps) {
         }
     }, [messages]);
 
+    const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+
+    // Dynamic viewport height handling for mobile keyboards
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.visualViewport) {
+                setViewportHeight(window.visualViewport.height);
+            }
+        };
+
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', handleResize);
+            // Initial set
+            setViewportHeight(window.visualViewport.height);
+        }
+
+        return () => {
+            if (window.visualViewport) {
+                window.visualViewport.removeEventListener('resize', handleResize);
+            }
+        };
+    }, []);
+
     const handleSend = async (forcedValue?: string) => {
         const textToSubmit = forcedValue || inputValue;
         if (!textToSubmit.trim() || isLoading) return;
@@ -95,12 +118,16 @@ export function ChatCoach({ sessionData }: ChatCoachProps) {
     return (
         <div className="fixed bottom-4 right-4 left-4 sm:left-auto sm:bottom-6 sm:right-6 z-50 flex flex-col items-end gap-4 pointer-events-none">
             {/* Chat Window */}
-            <div className={cn(
-                "w-full sm:w-96 max-h-[70vh] sm:max-h-[600px] rounded-2xl flex flex-col overflow-hidden shadow-2xl transition-all duration-500 border border-white/20 origin-bottom sm:origin-bottom-right pointer-events-auto",
-                // Backdrop-blur-xl (original) and 90% opacity for better mobile contrast
-                "backdrop-blur-xl bg-surface-dark/90",
-                isOpen ? "scale-100 opacity-100 translate-y-0" : "scale-0 opacity-0 translate-y-10"
-            )}>
+            <div
+                style={{
+                    maxHeight: isOpen ? (viewportHeight ? `${viewportHeight * 0.75}px` : '70vh') : '0px'
+                }}
+                className={cn(
+                    "w-full sm:w-96 rounded-2xl flex flex-col overflow-hidden shadow-2xl transition-all duration-300 border border-white/20 origin-bottom sm:origin-bottom-right pointer-events-auto",
+                    // Backdrop-blur-xl (original) and 90% opacity for better mobile contrast
+                    "backdrop-blur-xl bg-surface-dark/90",
+                    isOpen ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 scale-95 pointer-events-none"
+                )}>
                 {/* Header */}
                 <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
                     <div className="flex items-center gap-3">
