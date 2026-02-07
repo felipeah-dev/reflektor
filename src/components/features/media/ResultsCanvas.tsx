@@ -48,8 +48,12 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
         // --- Smart Responsiveness Logic ---
 
         // 1. Vertical Positioning:
-        // If box is too high (< 15% from top), push pill DOWN.
-        const pillAbove = top > 15;
+        // If box is in upper portion (< 25% from top), push pill DOWN to avoid cutoff at top.
+        // If box is in lower portion (> 75% from top), push pill UP to avoid cutoff at bottom.
+        // Otherwise (middle 50%), place pill above the box.
+        const isNearTop = top < 25;
+        const isNearBottom = top > 75;
+        const pillAbove = !isNearTop && !isNearBottom; // Pill above only in middle region
         const verticalClass = pillAbove ? "bottom-full mb-2" : "top-full mt-2";
 
         // 2. Horizontal Anchoring:
@@ -67,46 +71,51 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
         const borderWidth = "clamp(1.5px, 0.3vmin, 3px)";
         const borderRadius = "clamp(6px, 1.5vmin, 16px)";
 
+        // 4. Dynamic Font Sizing for Pills:
+        // Instead of limiting height, reduce text size near edges to fit complete text
+        // Bottom/top annotations use smaller text, middle can be larger
+        const textSizeClass = isNearBottom || isNearTop
+          ? "text-[8px] sm:text-[9px] md:text-[10px]"
+          : "text-[9px] sm:text-[10px] md:text-xs";
+
         return (
           <div
             key={`${index}-${event.start}`}
             className={cn(
               "absolute pointer-events-none transition-all duration-200 ease-out", // Faster transition for "precision" feel
-              isError
-                ? "border-yellow-500/60 shadow-[0_0_15px_rgba(234,179,8,0.3)] animate-soft-pulse-yellow"
-                : "border-primary/70 shadow-[0_0_15px_rgba(19,236,91,0.3)] animate-soft-pulse"
+              "z-20"
             )}
             style={{
               top: `${top}%`,
               left: `${left}%`,
               width: `${width}%`,
               height: `${height}%`,
-              borderWidth: borderWidth,
+              border: `${borderWidth} solid`,
               borderRadius: borderRadius,
-              borderStyle: 'solid'
+              borderColor: isError ? 'rgb(234 179 8 / 0.8)' : 'rgb(19 236 91 / 0.8)',
+              boxShadow: isError
+                ? '0 0 20px rgba(234, 179, 8, 0.4)'
+                : '0 0 20px rgba(19, 236, 91, 0.4)',
             }}
           >
-            {/* Box Corner Accents for "Tech/Precision" feel */}
-            <div className={cn("absolute size-2 rounded-full opacity-0 sm:opacity-100 transition-opacity", isError ? "bg-yellow-500" : "bg-primary")} style={{ top: '-1px', left: '-1px' }}></div>
-            <div className={cn("absolute size-2 rounded-full opacity-0 sm:opacity-100 transition-opacity", isError ? "bg-yellow-500" : "bg-primary")} style={{ bottom: '-1px', right: '-1px' }}></div>
-
             {/* Smart Floating Pill */}
-            <div className={cn(
-              "absolute flex items-start gap-1.5 sm:gap-2 z-30",
-              "glass-pill min-w-[100px] max-w-[80%] sm:max-w-[85%] md:max-w-[400px]",
-              "landscape:max-w-[250px] landscape:sm:max-w-[300px]",
-              "px-2 py-1 sm:px-3 sm:py-1.5 md:px-4 md:py-2",
-              verticalClass,
-              horizontalClass
-            )}>
+            <div
+              className={cn(
+                "absolute flex items-start gap-1.5 sm:gap-2 z-30",
+                "glass-pill min-w-[100px] max-w-[90%] sm:max-w-[90%] md:max-w-[500px]",
+                "landscape:max-w-[300px]",
+                "px-2 py-1 sm:px-3 sm:py-1.5 md:px-4 md:py-2",
+                verticalClass,
+                horizontalClass
+              )}
+            >
               <span className={cn(
                 "size-1.5 sm:size-2 rounded-full animate-pulse shrink-0 mt-0.5",
                 isError ? "bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,1)]" : "bg-primary shadow-[0_0_8px_rgba(19,236,91,1)]"
               )}></span>
               <span className={cn(
-                "text-white text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider feedback-shadow",
-                "whitespace-normal break-words leading-tight",
-                "max-h-[4.5em] landscape:max-h-[3em] overflow-hidden"
+                "text-white font-bold uppercase tracking-wide feedback-shadow whitespace-normal break-words leading-snug",
+                textSizeClass
               )}>
                 {event.description} {event.type === 'filler' && `(#${count})`}
               </span>
