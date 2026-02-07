@@ -78,6 +78,25 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
           ? "text-[8px] sm:text-[9px] md:text-[10px]"
           : "text-[9px] sm:text-[10px] md:text-xs";
 
+        // --- Mobile Specific Vertical Logic ---
+        const boxBottom = top + height;
+        let mobileVerticalClass = "top-full mt-2"; // Default below
+
+        if (top > 50) {
+          // If box starts in bottom half, put pill above
+          mobileVerticalClass = "bottom-full mb-2";
+        } else if (boxBottom > 80) {
+          // If box ends near bottom
+          if (top > 15) {
+            // If there is space above, put above
+            mobileVerticalClass = "bottom-full mb-2";
+          } else {
+            // Box consumes most of screen (top < 15, bottom > 80)
+            // Put INSIDE at bottom to stay safe
+            mobileVerticalClass = "bottom-2";
+          }
+        }
+
         return (
           <div
             key={`${index}-${event.start}`}
@@ -98,24 +117,46 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
                 : '0 0 20px rgba(19, 236, 91, 0.4)',
             }}
           >
-            {/* Smart Floating Pill */}
+            {/* --- MOBILE PILL (md:hidden) --- */}
             <div
               className={cn(
-                "absolute flex items-start gap-1.5 sm:gap-2 z-30",
-                "glass-pill min-w-[100px] max-w-[90%] sm:max-w-[90%] md:max-w-[500px]",
+                "md:hidden absolute flex items-start gap-1.5 z-30",
+                "glass-pill min-w-[100px] max-w-[90%]",
                 "landscape:max-w-[300px]",
-                "px-2 py-1 sm:px-3 sm:py-1.5 md:px-4 md:py-2",
-                verticalClass,
-                horizontalClass
+                "px-2 py-1",
+                mobileVerticalClass,
+                horizontalClass // Keep horizontal logic shared for now (centering)
               )}
             >
               <span className={cn(
-                "size-1.5 sm:size-2 rounded-full animate-pulse shrink-0 mt-0.5",
+                "size-1.5 rounded-full animate-pulse shrink-0 mt-0.5",
                 isError ? "bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,1)]" : "bg-primary shadow-[0_0_8px_rgba(19,236,91,1)]"
               )}></span>
               <span className={cn(
                 "text-white font-bold uppercase tracking-wide feedback-shadow whitespace-normal break-words leading-snug",
                 textSizeClass
+              )}>
+                {event.description} {event.type === 'filler' && `(#${count})`}
+              </span>
+            </div>
+
+            {/* --- DESKTOP PILL (hidden md:flex) --- */}
+            <div
+              className={cn(
+                "hidden md:flex absolute items-start gap-2 z-30",
+                "glass-pill min-w-[100px] max-w-[500px]",
+                "px-4 py-2",
+                verticalClass, // Original logic for desktop
+                horizontalClass
+              )}
+            >
+              <span className={cn(
+                "size-2 rounded-full animate-pulse shrink-0 mt-0.5",
+                isError ? "bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,1)]" : "bg-primary shadow-[0_0_8px_rgba(19,236,91,1)]"
+              )}></span>
+              <span className={cn(
+                "text-white font-bold uppercase tracking-wide feedback-shadow whitespace-normal break-words leading-snug",
+                "text-xs"
               )}>
                 {event.description} {event.type === 'filler' && `(#${count})`}
               </span>
