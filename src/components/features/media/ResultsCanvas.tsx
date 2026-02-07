@@ -93,8 +93,8 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
             {/* Smart Floating Pill */}
             <div className={cn(
               "absolute flex items-center gap-1.5 sm:gap-2 z-30",
-              "glass-pill min-w-[80px] max-w-[250px] sm:max-w-[300px] md:max-w-[350px]",
-              "landscape:max-w-[200px] landscape:sm:max-w-[250px]",
+              "glass-pill min-w-[100px] max-w-[80%] sm:max-w-[85%] md:max-w-[400px]",
+              "landscape:max-w-[250px] landscape:sm:max-w-[300px]",
               "px-2 py-1 sm:px-3 sm:py-1.5 md:px-4 md:py-2",
               verticalClass,
               horizontalClass
