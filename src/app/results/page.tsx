@@ -478,15 +478,23 @@ export default function ResultsPage() {
                         <div
                             ref={videoContainerRef}
                             className={cn(
-                                "relative w-full bg-black rounded-xl overflow-hidden border border-surface-dark group shadow-2xl transition-all mx-auto",
-                                isVertical ? "aspect-[9/16] max-h-[85vh] max-w-[500px]" : "aspect-video",
-                                isPseudoFullscreen && "is-pseudo-fullscreen"
+                                "relative transition-all mx-auto bg-black overflow-hidden",
+                                // Normal Mode: standard constraints and rounded corners
+                                !isPseudoFullscreen && cn(
+                                    "w-full border border-surface-dark group shadow-2xl rounded-xl",
+                                    isVertical ? "aspect-[9/16] max-h-[85vh] max-w-[500px]" : "aspect-video"
+                                ),
+                                // Fullscreen Mode: fixed fullscreen, no rounded corners, no max constraints
+                                isPseudoFullscreen && "is-pseudo-fullscreen fixed inset-0 z-[9999] w-screen h-screen flex items-center justify-center bg-black"
                             )}
                         >
                             <div className="w-full h-full flex items-center justify-center">
+                                {/* Inner Wrapper - Matches Video Aspect Ratio */}
                                 <div className={cn(
-                                    "relative w-full max-h-full",
-                                    isVertical ? "aspect-[9/16]" : "aspect-video"
+                                    "relative",
+                                    isVertical ? "aspect-[9/16]" : "aspect-video",
+                                    // In fullscreen, let it scale to fit screen dimensions while maintaining aspect ratio
+                                    isPseudoFullscreen ? "max-h-full max-w-full h-auto w-auto" : "w-full h-full"
                                 )}>
                                     {/* Dynamic Canvas Layer or Real Video */}
                                     {session?.videoUrl ? (
