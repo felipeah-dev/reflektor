@@ -62,9 +62,10 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
         else if (centerPoint > 80) horizontalClass = "right-0 translate-x-0";
 
         // 3. Dynamic Scaling for Box:
-        // Use container query-like relative units for borders
-        const borderWidth = "clamp(2px, 0.4vw, 4px)";
-        const borderRadius = "clamp(8px, 2vw, 24px)";
+        // Use container-relative units that work better on mobile
+        // On small screens (landscape mobile), use smaller minimum values
+        const borderWidth = "clamp(1.5px, 0.3vmin, 3px)";
+        const borderRadius = "clamp(6px, 1.5vmin, 16px)";
 
         return (
           <div
@@ -91,9 +92,9 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
 
             {/* Smart Floating Pill */}
             <div className={cn(
-              "absolute flex items-center gap-2 z-30 whitespace-nowrap",
-              "glass-pill w-max max-w-[200px] sm:max-w-none", // Allow more width on desktop
-              "px-3 py-1.5 sm:px-4 sm:py-2",
+              "absolute flex items-center gap-1.5 sm:gap-2 z-30 whitespace-nowrap",
+              "glass-pill w-max max-w-[180px] sm:max-w-[200px] md:max-w-none",
+              "px-2 py-1 sm:px-3 sm:py-1.5 md:px-4 md:py-2",
               verticalClass,
               horizontalClass
             )}>
@@ -101,7 +102,7 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
                 "size-1.5 sm:size-2 rounded-full animate-pulse shrink-0",
                 isError ? "bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,1)]" : "bg-primary shadow-[0_0_8px_rgba(19,236,91,1)]"
               )}></span>
-              <span className="text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider feedback-shadow">
+              <span className="text-white text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider feedback-shadow truncate">
                 {event.description} {event.type === 'filler' && `(#${count})`}
               </span>
             </div>
