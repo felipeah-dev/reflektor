@@ -47,66 +47,55 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
 
         // --- Smart Responsiveness Logic ---
 
-        // 1. Vertical Positioning:
-        // If box is in upper portion (< 25% from top), push pill DOWN to avoid cutoff at top.
-        // If box is in lower portion (> 75% from top), push pill UP to avoid cutoff at bottom.
-        // Otherwise (middle 50%), place pill above the box.
-        const isNearTop = top < 25;
-        const isNearBottom = top > 75;
-        const pillAbove = !isNearTop && !isNearBottom; // Pill above only in middle region
-        const verticalClass = pillAbove ? "bottom-full mb-2" : "top-full mt-2";
+        // 1. Vertical Positioning (Unified Robust Logic):
+        // Calculate the best position (Above, Below, or Inside) to avoid edge cutoff
+        // This applies to both Mobile and Desktop for consistent behavior
+
+        const boxBottom = top + height;
+        let verticalClass = "top-full mt-2"; // Default: Below the box
+
+        // Check Top Edge Collision (Safe Zone 30%)
+        if (top < 30) {
+          // Box starts in upper 30% of screen.
+          // Putting pill ABOVE is risky (text touches top edge).
+
+          if (boxBottom > 75) {
+            // Box also extends deep down (Tall box).
+            // Solution: Place INSIDE at the bottom of the box.
+            verticalClass = "bottom-2";
+          } else {
+            // Box starts high but ends early (Short box at top).
+            // Plenty of room below.
+            verticalClass = "top-full mt-2";
+          }
+        }
+        // 2. Starts lower down (Top >= 30%)
+        else if (boxBottom > 85) {
+          // Ends near bottom. Put ABOVE.
+          verticalClass = "bottom-full mb-2";
+        }
+        // 3. Middle Area
+        else {
+          // Default preference: Below
+          verticalClass = "top-full mt-2";
+        }
 
         // 2. Horizontal Anchoring:
-        // If box is too far left (< 20%), anchor Left.
-        // If box is too far right (> 80%), anchor Right.
-        // Else, Center.
         const centerPoint = left + (width / 2);
         let horizontalClass = "left-1/2 -translate-x-1/2"; // Default Center
         if (centerPoint < 20) horizontalClass = "left-0 translate-x-0";
         else if (centerPoint > 80) horizontalClass = "right-0 translate-x-0";
 
         // 3. Dynamic Scaling for Box:
-        // Use container-relative units that work better on mobile
-        // On small screens (landscape mobile), use smaller minimum values
         const borderWidth = "clamp(1.5px, 0.3vmin, 3px)";
         const borderRadius = "clamp(6px, 1.5vmin, 16px)";
 
         // 4. Dynamic Font Sizing for Pills:
-        // Instead of limiting height, reduce text size near edges to fit complete text
-        // Bottom/top annotations use smaller text, middle can be larger
-        const textSizeClass = isNearBottom || isNearTop
+        const isNearTopEdge = top < 30;
+        const isNearBottomEdge = boxBottom > 85;
+        const textSizeClass = isNearBottomEdge || isNearTopEdge
           ? "text-[8px] sm:text-[9px] md:text-[10px]"
           : "text-[9px] sm:text-[10px] md:text-xs";
-
-        // --- Mobile Specific Vertical Logic ---
-        const boxBottom = top + height;
-        let mobileVerticalClass = "top-full mt-2"; // Default below
-
-        // 1. Check Top Edge Collision (Expanded Safe Zone to 30%)
-        if (top < 30) {
-          // Box starts in upper 30% of screen. 
-          // Putting pill ABOVE is risky (text touches top edge).
-
-          if (boxBottom > 75) {
-            // Box also extends deep down.
-            // Above is risky (top cut), Below is risky (bottom cut).
-            // Solution: INSIDE at bottom.
-            mobileVerticalClass = "bottom-2";
-          } else {
-            // Box starts high but ends early. Plenty of room below.
-            mobileVerticalClass = "top-full mt-2";
-          }
-        }
-        // 2. Starts lower down (Top >= 30%) -> Safe to put ABOVE if needed
-        else if (boxBottom > 85) {
-          // Ends near bottom. Put ABOVE.
-          mobileVerticalClass = "bottom-full mb-2";
-        }
-        // 3. Middle Area
-        else {
-          // Default preference: Below
-          mobileVerticalClass = "top-full mt-2";
-        }
 
         return (
           <div
@@ -135,8 +124,8 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
                 "glass-pill min-w-[100px] max-w-[90%]",
                 "landscape:max-w-[300px]",
                 "px-2 py-1",
-                mobileVerticalClass,
-                horizontalClass // Keep horizontal logic shared for now (centering)
+                verticalClass, // Using Unified Logic
+                horizontalClass
               )}
             >
               <span className={cn(
@@ -157,7 +146,7 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
                 "hidden md:flex absolute items-start gap-2 z-30",
                 "glass-pill min-w-[100px] max-w-[500px]",
                 "px-4 py-2",
-                verticalClass, // Original logic for desktop
+                verticalClass, // Using Unified Logic
                 horizontalClass
               )}
             >
