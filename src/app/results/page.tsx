@@ -484,7 +484,10 @@ export default function ResultsPage() {
                             )}
                         >
                             <div className="w-full h-full flex items-center justify-center">
-                                <div className="relative aspect-video w-full max-h-full">
+                                <div className={cn(
+                                    "relative w-full max-h-full",
+                                    isVertical ? "aspect-[9/16]" : "aspect-video"
+                                )}>
                                     {/* Dynamic Canvas Layer or Real Video */}
                                     {session?.videoUrl ? (
                                         <>
