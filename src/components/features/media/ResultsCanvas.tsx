@@ -93,7 +93,8 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
             {/* Smart Floating Pill */}
             <div className={cn(
               "absolute flex items-center gap-1.5 sm:gap-2 z-30",
-              "glass-pill min-w-[80px] max-w-[200px] sm:max-w-[250px] md:max-w-[300px]",
+              "glass-pill min-w-[80px] max-w-[250px] sm:max-w-[300px] md:max-w-[350px]",
+              "landscape:max-w-[200px] landscape:sm:max-w-[250px]",
               "px-2 py-1 sm:px-3 sm:py-1.5 md:px-4 md:py-2",
               verticalClass,
               horizontalClass
@@ -102,7 +103,10 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
                 "size-1.5 sm:size-2 rounded-full animate-pulse shrink-0",
                 isError ? "bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,1)]" : "bg-primary shadow-[0_0_8px_rgba(19,236,91,1)]"
               )}></span>
-              <span className="text-white text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider feedback-shadow break-words line-clamp-3">
+              <span className={cn(
+                "text-white text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider feedback-shadow break-words",
+                "line-clamp-5 landscape:line-clamp-3"
+              )}>
                 {event.description} {event.type === 'filler' && `(#${count})`}
               </span>
             </div>
