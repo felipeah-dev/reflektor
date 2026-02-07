@@ -121,14 +121,13 @@ export function ChatCoach({ sessionData }: ChatCoachProps) {
         <div className="fixed bottom-4 right-4 left-4 sm:left-auto sm:bottom-6 sm:right-6 z-50 flex flex-col items-end gap-4 pointer-events-none">
             {/* Chat Window */}
             <div
-                style={{
-                    maxHeight: isOpen ? (viewportHeight ? `${Math.min(viewportHeight * 0.6, 500)}px` : '60vh') : '0px'
-                }}
                 className={cn(
                     "w-full sm:w-96 rounded-2xl flex flex-col overflow-hidden shadow-2xl transition-all duration-300 border border-white/20 origin-bottom sm:origin-bottom-right pointer-events-auto",
                     // Backdrop-blur-xl (original) and 90% opacity for better mobile contrast
                     "backdrop-blur-xl bg-surface-dark/90",
-                    isOpen ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 scale-95 pointer-events-none"
+                    // Use max-h with viewport units for better stability
+                    "max-h-[min(85vh,600px)] landscape:max-h-[min(70vh,400px)]",
+                    isOpen ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 scale-95 pointer-events-none h-0"
                 )}>
                 {/* Header */}
                 <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
@@ -158,7 +157,7 @@ export function ChatCoach({ sessionData }: ChatCoachProps) {
                 {/* Messages Area */}
                 <div
                     ref={scrollRef}
-                    className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 scrollbar-hide bg-black/40 min-h-[200px]"
+                    className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 scrollbar-hide bg-black/40 min-h-[150px]"
                 >
                     {messages.map((msg, i) => (
                         <div
