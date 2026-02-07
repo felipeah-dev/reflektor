@@ -22,7 +22,7 @@ export function ChatCoach({ sessionData }: ChatCoachProps) {
     const [messages, setMessages] = useState<Message[]>([
         {
             role: 'model',
-            text: `¡Hola! He analizado tu sesión de ${sessionData.scenario || 'práctica'}. Veo que tienes un puntaje de ${sessionData.analysis?.summary?.score || 0}/10. ¿En qué puedo ayudarte a mejorar hoy?`
+            text: `Hi! I've analyzed your ${sessionData.scenario || 'practice'} session. I see you scored ${sessionData.analysis?.summary?.score || 0}/10. How can I help you improve today?`
         }
     ]);
     const [inputValue, setInputValue] = useState("");
@@ -70,7 +70,7 @@ export function ChatCoach({ sessionData }: ChatCoachProps) {
             setMessages(prev => [
                 ...prev,
                 { role: 'user', text: textToSubmit },
-                { role: 'model', text: "Lo siento, parece que no tienes conexión a internet. No puedo responder en este momento." }
+                { role: 'model', text: "Sorry, it looks like you're offline. I can't respond right now." }
             ]);
             setInputValue("");
             return;
@@ -203,7 +203,7 @@ export function ChatCoach({ sessionData }: ChatCoachProps) {
                     >
                         <input
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all"
-                            placeholder="Pregunta a tu coach..."
+                            placeholder="Ask your coach..."
                             type="text"
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
