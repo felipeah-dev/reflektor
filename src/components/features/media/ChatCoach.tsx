@@ -39,7 +39,7 @@ export function ChatCoach({ sessionData }: ChatCoachProps) {
 
     const [viewportHeight, setViewportHeight] = useState<number | null>(null);
 
-    // Dynamic viewport height handling for mobile keyboards
+    // Dynamic viewport height handling for mobile keyboards and orientation changes
     useEffect(() => {
         const handleResize = () => {
             if (window.visualViewport) {
@@ -49,6 +49,7 @@ export function ChatCoach({ sessionData }: ChatCoachProps) {
 
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', handleResize);
+            window.visualViewport.addEventListener('scroll', handleResize);
             // Initial set
             setViewportHeight(window.visualViewport.height);
         }
@@ -56,6 +57,7 @@ export function ChatCoach({ sessionData }: ChatCoachProps) {
         return () => {
             if (window.visualViewport) {
                 window.visualViewport.removeEventListener('resize', handleResize);
+                window.visualViewport.removeEventListener('scroll', handleResize);
             }
         };
     }, []);
@@ -120,7 +122,7 @@ export function ChatCoach({ sessionData }: ChatCoachProps) {
             {/* Chat Window */}
             <div
                 style={{
-                    maxHeight: isOpen ? (viewportHeight ? `${viewportHeight * 0.75}px` : '70vh') : '0px'
+                    maxHeight: isOpen ? (viewportHeight ? `${Math.min(viewportHeight * 0.6, 500)}px` : '60vh') : '0px'
                 }}
                 className={cn(
                     "w-full sm:w-96 rounded-2xl flex flex-col overflow-hidden shadow-2xl transition-all duration-300 border border-white/20 origin-bottom sm:origin-bottom-right pointer-events-auto",
@@ -156,7 +158,7 @@ export function ChatCoach({ sessionData }: ChatCoachProps) {
                 {/* Messages Area */}
                 <div
                     ref={scrollRef}
-                    className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 scrollbar-hide bg-black/40 min-h-[250px] sm:min-h-[350px]"
+                    className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 scrollbar-hide bg-black/40 min-h-[200px]"
                 >
                     {messages.map((msg, i) => (
                         <div
