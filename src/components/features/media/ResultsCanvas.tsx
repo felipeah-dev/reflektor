@@ -82,18 +82,27 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
         const boxBottom = top + height;
         let mobileVerticalClass = "top-full mt-2"; // Default below
 
-        if (top > 50) {
-          // If box starts in bottom half, put pill above
-          mobileVerticalClass = "bottom-full mb-2";
-        } else if (boxBottom > 80) {
-          // If box ends near bottom
-          if (top > 15) {
-            // If there is space above, put above
-            mobileVerticalClass = "bottom-full mb-2";
+        // 1. Check Top Edge Collision
+        if (top < 15) {
+          // Box starts very high up
+          if (height > 80) {
+            // Full screenish box -> Put INSIDE at top
+            mobileVerticalClass = "top-2";
           } else {
-            // Box consumes most of screen (top < 15, bottom > 80)
-            // Put INSIDE at bottom to stay safe
-            mobileVerticalClass = "bottom-2";
+            // Normal box high up -> Put BELOW
+            mobileVerticalClass = "top-full mt-2";
+          }
+        }
+        // 2. Check Bottom Edge Collision
+        else if (boxBottom > 85) {
+          // Box ends near bottom -> Put ABOVE
+          mobileVerticalClass = "bottom-full mb-2";
+        }
+        // 3. Middle Area
+        else {
+          // Default preference: Below, unless it pushes off screen
+          if (boxBottom + 15 > 100) {
+            mobileVerticalClass = "bottom-full mb-2";
           }
         }
 
