@@ -47,7 +47,7 @@ export default function ProcessingPage() {
                 console.error("Analysis failed:", err);
 
                 if (err.message?.includes("NETWORK_ERROR")) {
-                    setStatusMsg("Hubo un problema de conexión. No te preocupes, tu video está guardado localmente. Busca una red más estable e inténtalo de nuevo.");
+                    setStatusMsg("There was a connection issue. Don't worry, your video is saved locally. Please find a more stable network and try again.");
                     setIsNetworkFailure(true);
                 } else {
                     setStatusMsg("Analysis failed. Please try again.");
@@ -116,12 +116,12 @@ export default function ProcessingPage() {
                                 </span>
                                 <div>
                                     <p className="text-yellow-500 font-bold text-sm">
-                                        {networkQuality === 'offline' ? 'Estás offline' : 'Conexión inestable detectada'}
+                                        {networkQuality === 'offline' ? 'You are offline' : 'Unstable connection detected'}
                                     </p>
                                     <p className="text-white/80 text-xs mt-0.5">
                                         {networkQuality === 'offline'
-                                            ? 'Por favor, reconéctate para continuar con el análisis.'
-                                            : 'Esto podría retrasar la subida del video. Te recomendamos buscar un lugar con mejor señal.'}
+                                            ? 'Please reconnect to continue with the analysis.'
+                                            : 'This might delay the video upload. We recommend finding a place with better signal.'}
                                     </p>
                                 </div>
                             </div>
@@ -134,12 +134,12 @@ export default function ProcessingPage() {
                                     className="px-8 py-3 bg-primary text-background-dark font-bold rounded-full hover:bg-primary/90 transition-all flex items-center justify-center gap-2 w-full md:w-fit shadow-[0_0_20px_rgba(19,236,91,0.3)] hover:scale-105 active:scale-95"
                                 >
                                     <span className="material-symbols-outlined">refresh</span>
-                                    {isNetworkFailure ? 'Intentar subir de nuevo' : 'Retry Analysis'}
+                                    {isNetworkFailure ? 'Try uploading again' : 'Retry Analysis'}
                                 </button>
 
                                 {isNetworkFailure && (
                                     <p className="text-xs text-muted italic">
-                                        Tu video no se perderá al reintentar, se encuentra guardado en la memoria de tu navegador.
+                                        Your video won't be lost on retry; it's saved in your browser's memory.
                                     </p>
                                 )}
                             </div>

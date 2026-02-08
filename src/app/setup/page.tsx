@@ -153,7 +153,7 @@ function SetupContent() {
                                         className="group/reset flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 transition-all text-[10px] font-bold text-white/70 hover:text-white"
                                     >
                                         <span className="material-symbols-outlined !text-xs group-hover:rotate-[-120deg] transition-transform duration-500">replay</span>
-                                        REINICIAR
+                                        RESTART
                                     </button>
                                 </div>
 
@@ -173,7 +173,7 @@ function SetupContent() {
                                             </p>
                                         ))
                                     ) : (
-                                        <p className="text-white/30 text-lg font-medium blur-[1.5px] text-center pt-4">Escribe tu guion abajo...</p>
+                                        <p className="text-white/30 text-lg font-medium blur-[1.5px] text-center pt-4">Write your script below...</p>
                                     )}
                                 </div>
                                 <div className="absolute top-1/2 left-0 w-1.5 h-10 bg-primary -translate-y-1/2 rounded-r-full shadow-[0_0_15px_rgba(28,227,94,0.5)] z-20 animate-pulse"></div>
@@ -211,7 +211,7 @@ function SetupContent() {
                                                 className="group/reset flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 transition-all text-[10px] font-bold text-white/70 hover:text-white"
                                             >
                                                 <span className="material-symbols-outlined !text-xs group-hover:rotate-[-120deg] transition-transform duration-500">replay</span>
-                                                REINICIAR
+                                                RESTART
                                             </button>
                                         </div>
 
@@ -230,7 +230,7 @@ function SetupContent() {
                                                     </p>
                                                 ))
                                             ) : (
-                                                <p className="text-white/30 text-xl font-medium blur-[1.5px]">Escribe tu guion abajo...</p>
+                                                <p className="text-white/30 text-xl font-medium blur-[1.5px]">Write your script below...</p>
                                             )}
                                         </div>
                                         <div className="absolute top-1/2 left-0 w-1.5 h-12 bg-primary -translate-y-1/2 rounded-r-full shadow-[0_0_15px_rgba(28,227,94,0.5)] z-20 animate-pulse"></div>
@@ -310,7 +310,7 @@ function SetupContent() {
                                         onClick={async () => {
                                             try {
                                                 if (!navigator.clipboard) {
-                                                    alert("Tu navegador no permite acceder al portapapeles automáticamente.");
+                                                    alert("Your browser does not allow automatic clipboard access.");
                                                     return;
                                                 }
                                                 const text = await navigator.clipboard.readText();

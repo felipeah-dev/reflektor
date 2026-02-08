@@ -135,7 +135,7 @@ function RecordingContent() {
                         className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-500 transition-all text-xs font-bold uppercase tracking-wider"
                     >
                         <span className="material-symbols-outlined text-[18px]">settings_backup_restore</span>
-                        Regresar a configuración
+                        Back to Setup
                     </Link>
                 </div>
             </header>
@@ -287,7 +287,7 @@ function RecordingContent() {
                         <Link
                             href={backToConfigUrl}
                             className="group flex items-center justify-center size-12 rounded-full bg-white/10 hover:bg-white/20 transition-all border border-white/5 text-white md:hidden"
-                            title="Regresar a configuración"
+                            title="Back to Setup"
                         >
                             <span className="material-symbols-outlined text-[24px] group-hover:rotate-180 transition-transform">settings_backup_restore</span>
                         </Link>
