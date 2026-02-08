@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getGeminiKeys } from '@/lib/geminiKeys';
 import { rateLimit } from '@/lib/rateLimit';
 
 // Rate Limiter: 10 requests per hour per IP
@@ -22,9 +23,9 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const apiKey = process.env.GOOGLE_API_KEY;
-        if (!apiKey) {
-            return NextResponse.json({ error: 'GOOGLE_API_KEY not configured' }, { status: 500 });
+        const apiKeys = getGeminiKeys();
+        if (apiKeys.length === 0) {
+            return NextResponse.json({ error: 'No GOOGLE_API_KEY configured' }, { status: 500 });
         }
 
         const formData = await req.formData();
@@ -55,11 +56,11 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const genAI = new GoogleGenerativeAI(apiKey);
         let modelName = "gemini-3-flash-preview";
         let result;
         let retryCount = 0;
-        const MAX_RETRIES = 3;
+        let keyIndex = 0;
+        const MAX_RETRIES_PER_KEY = 2;
 
         const arrayBuffer = await videoFile.arrayBuffer();
         const base64Video = Buffer.from(arrayBuffer).toString('base64');
@@ -68,7 +69,11 @@ export async function POST(req: NextRequest) {
             ? `The video is exactly ${totalDuration} seconds long. Ensure all timestamps in "start" and "end" are within 0 and ${totalDuration}.`
             : "";
 
-        while (retryCount < MAX_RETRIES) {
+        // Strategy: Try each API key. For each key, allow a small number of retries for 503/429.
+        while (keyIndex < apiKeys.length) {
+            const currentApiKey = apiKeys[keyIndex];
+            const genAI = new GoogleGenerativeAI(currentApiKey);
+
             try {
                 const model = genAI.getGenerativeModel({
                     model: modelName,
@@ -90,21 +95,33 @@ export async function POST(req: NextRequest) {
                     4) Provide coaching advice SPECIFIC to the ${scenario} context provided in system instructions.
                     Return ONLY the JSON object.`
                 ]);
-                break; // If successful, exit the loop
+                break; // If successful, exit the outer loop
             } catch (error: any) {
-                retryCount++;
                 const errorMessage = error.message || String(error);
-                const isOverloaded = errorMessage.includes("503") || errorMessage.includes("overloaded") || errorMessage.includes("429");
+                const isOverloaded = errorMessage.includes("503") || errorMessage.includes("overloaded") || errorMessage.includes("429") || errorMessage.includes("quota");
 
-                if (isOverloaded && retryCount < MAX_RETRIES) {
+                if (isOverloaded) {
+                    retryCount++;
+                    // If we've retried on this key or it's a hard quota limit, move to next key
+                    if (retryCount >= MAX_RETRIES_PER_KEY || errorMessage.includes("quota")) {
+                        console.warn(`API Key ${keyIndex} failed (Overloaded/Quota). Rotating to next key...`);
+                        keyIndex++;
+                        retryCount = 0; // Reset for next key
+
+                        // If we are at the last key, try a fallback model as a final attempt
+                        if (keyIndex === apiKeys.length - 1) {
+                            modelName = "gemini-2.5-flash-latest";
+                        }
+
+                        continue;
+                    }
+
+                    // Small backoff before retry on SAME key
                     const waitTime = Math.pow(2, retryCount) * 1000;
                     await new Promise(resolve => setTimeout(resolve, waitTime));
-
-                    // On last retry, try gemini-2.5-flash-latest as fallback
-                    if (retryCount === MAX_RETRIES - 1) {
-                        modelName = "gemini-2.5-flash-latest";
-                    }
+                    continue;
                 } else {
+                    // Critical unexpected error, don't rotate just fail
                     throw error;
                 }
             }

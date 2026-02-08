@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getGeminiKeys } from '@/lib/geminiKeys';
 import { rateLimit } from '@/lib/rateLimit';
 
 // Rate Limiter: 20 messages per minute per IP
@@ -22,19 +23,22 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const apiKey = process.env.GOOGLE_API_KEY;
-        if (!apiKey) {
-            return NextResponse.json({ error: 'GOOGLE_API_KEY not configured' }, { status: 500 });
+        const apiKeys = getGeminiKeys();
+        if (apiKeys.length === 0) {
+            return NextResponse.json({ error: 'No GOOGLE_API_KEY configured' }, { status: 500 });
         }
 
         const { message, history, systemInstruction } = await req.json();
 
-        const genAI = new GoogleGenerativeAI(apiKey);
         let modelName = "gemini-3-flash-preview";
         let retryCount = 0;
-        const MAX_RETRIES = 2;
+        let keyIndex = 0;
+        const MAX_RETRIES_PER_KEY = 2;
 
-        while (retryCount < MAX_RETRIES) {
+        while (keyIndex < apiKeys.length) {
+            const currentApiKey = apiKeys[keyIndex];
+            const genAI = new GoogleGenerativeAI(currentApiKey);
+
             try {
                 const model = genAI.getGenerativeModel({
                     model: modelName,
@@ -50,12 +54,30 @@ export async function POST(req: NextRequest) {
 
                 return NextResponse.json({ text: response.text() });
             } catch (error: any) {
-                retryCount++;
                 const errorMessage = error.message || String(error);
-                const isOverloaded = errorMessage.includes("503") || errorMessage.includes("overloaded") || errorMessage.includes("429");
+                const isOverloaded = errorMessage.includes("503") || errorMessage.includes("overloaded") || errorMessage.includes("429") || errorMessage.includes("quota");
 
-                if (retryCount < MAX_RETRIES && (isOverloaded || modelName === "gemini-3-flash-preview")) {
-                    modelName = "gemini-2.5-flash-latest";
+                if (isOverloaded) {
+                    retryCount++;
+
+                    // If we've retried on this key or it's a hard quota limit, move to next key
+                    if (retryCount >= MAX_RETRIES_PER_KEY || errorMessage.includes("quota")) {
+                        console.warn(`API Key ${keyIndex} failed (Chat Overloaded/Quota). Rotating to next key...`);
+                        keyIndex++;
+                        retryCount = 0;
+
+                        // Switch model only if we are on the first key and it fails, 
+                        // or keep trying current model on next keys first.
+                        // For chat, we usually want the best model until it fails everywhere.
+                        if (keyIndex === apiKeys.length - 1 && modelName === "gemini-3-flash-preview") {
+                            modelName = "gemini-2.5-flash-latest";
+                        }
+                        continue;
+                    }
+
+                    // Backoff
+                    const waitTime = Math.pow(2, retryCount) * 500;
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
                     continue;
                 } else {
                     throw error;
