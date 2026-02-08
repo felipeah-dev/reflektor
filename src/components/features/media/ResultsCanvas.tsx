@@ -83,14 +83,18 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
         // 2. Horizontal Anchoring:
         const centerPoint = left + (width / 2);
         let horizontalClass = "left-1/2 -translate-x-1/2"; // Default Center
-        if (centerPoint < 20) horizontalClass = "left-0 translate-x-0";
-        else if (centerPoint > 80) horizontalClass = "right-0 translate-x-0";
+
+        // Thresholds for anchoring: 
+        // If center is in first 35%, anchor to left edge.
+        // If center is in last 35%, anchor to right edge.
+        if (centerPoint < 35) horizontalClass = "left-0 translate-x-0";
+        else if (centerPoint > 65) horizontalClass = "right-0 translate-x-0";
 
         // 3. Dynamic Scaling for Box:
         const borderWidth = "clamp(1.5px, 0.3vmin, 3px)";
         const borderRadius = "clamp(6px, 1.5vmin, 16px)";
 
-        // 4. Dynamic Font Sizing for Pills:
+        // 4. Dynamic Font Sizing for Pills (Mobile):
         const isNearTopEdge = top < 30;
         const isNearBottomEdge = boxBottom > 85;
         const textSizeClass = isNearBottomEdge || isNearTopEdge
@@ -98,70 +102,92 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
           : "text-[9px] sm:text-[10px] md:text-xs";
 
         return (
-          <div
-            key={`${index}-${event.start}`}
-            className={cn(
-              "absolute pointer-events-none transition-all duration-200 ease-out", // Faster transition for "precision" feel
-              "z-20"
-            )}
-            style={{
-              top: `${top}%`,
-              left: `${left}%`,
-              width: `${width}%`,
-              height: `${height}%`,
-              border: `${borderWidth} solid`,
-              borderRadius: borderRadius,
-              borderColor: isError ? 'rgb(234 179 8 / 0.8)' : 'rgb(19 236 91 / 0.8)',
-              boxShadow: isError
-                ? '0 0 20px rgba(234, 179, 8, 0.4)'
-                : '0 0 20px rgba(19, 236, 91, 0.4)',
-            }}
-          >
-            {/* --- MOBILE PILL (md:hidden) --- */}
+          <React.Fragment key={`${index}-${event.start}`}>
+            {/* --- THE BOUNDING BOX --- */}
             <div
-              className={cn(
-                "md:hidden absolute flex items-start gap-1.5 z-30",
-                "glass-pill min-w-[100px] max-w-[90%]",
-                "landscape:max-w-[300px]",
-                "px-2 py-1",
-                verticalClass, // Using Unified Logic
-                horizontalClass
-              )}
-            >
-              <span className={cn(
-                "size-1.5 rounded-full animate-pulse shrink-0 mt-0.5",
-                isError ? "bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,1)]" : "bg-primary shadow-[0_0_8px_rgba(19,236,91,1)]"
-              )}></span>
-              <span className={cn(
-                "text-white font-bold uppercase tracking-wide feedback-shadow whitespace-normal break-words leading-snug",
-                textSizeClass
-              )}>
-                {event.description} {event.type === 'filler' && `(#${count})`}
-              </span>
-            </div>
+              className="absolute pointer-events-none transition-all duration-200 ease-out z-10"
+              style={{
+                top: `${top}%`,
+                left: `${left}%`,
+                width: `${width}%`,
+                height: `${height}%`,
+                border: `${borderWidth} solid`,
+                borderRadius: borderRadius,
+                borderColor: isError ? 'rgb(234 179 8 / 0.8)' : 'rgb(19 236 91 / 0.8)',
+                boxShadow: isError
+                  ? '0 0 20px rgba(234, 179, 8, 0.4)'
+                  : '0 0 20px rgba(19, 236, 91, 0.4)',
+              }}
+            />
 
-            {/* --- DESKTOP PILL (hidden md:flex) --- */}
+            {/* --- PILL ANCHOR (Zero-width, positioned at the center of the box) --- */}
             <div
-              className={cn(
-                "hidden md:flex absolute items-start gap-2 z-30",
-                "glass-pill min-w-[100px] max-w-[500px]",
-                "px-4 py-2",
-                verticalClass, // Using Unified Logic
-                horizontalClass
-              )}
+              className="absolute pointer-events-none z-30 transition-all duration-200"
+              style={{
+                top: verticalClass.includes("bottom-full") ? `${top}%` : `${top + height}%`,
+                left: horizontalClass.includes("left-0") ? `${left}%` :
+                  horizontalClass.includes("right-0") ? `${left + width}%` :
+                    `${left + (width / 2)}%`,
+                width: 0,
+                height: 0,
+              }}
             >
-              <span className={cn(
-                "size-2 rounded-full animate-pulse shrink-0 mt-0.5",
-                isError ? "bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,1)]" : "bg-primary shadow-[0_0_8px_rgba(19,236,91,1)]"
-              )}></span>
-              <span className={cn(
-                "text-white font-bold uppercase tracking-wide feedback-shadow whitespace-normal break-words leading-snug",
-                "text-xs"
-              )}>
-                {event.description} {event.type === 'filler' && `(#${count})`}
-              </span>
+              {/* --- PILL CONTAINER --- */}
+              <div
+                className={cn(
+                  "absolute flex items-start gap-1.5 backdrop-blur-md bg-black/60 border border-white/20 shadow-xl w-max",
+                  // Horizontal alignment relative to anchor
+                  horizontalClass.includes("left-0") ? "left-0" :
+                    horizontalClass.includes("right-0") ? "right-0" :
+                      "-translate-x-1/2",
+                  // Vertical alignment relative to anchor
+                  verticalClass.includes("bottom-full") ? "bottom-2" :
+                    verticalClass.includes("bottom-2") ? "bottom-2" : // Case for "inside"
+                      "top-2",
+                  // Aesthetics
+                  "rounded-2xl px-4 py-2.5",
+                  // Width constraints (relative to video canvas now!)
+                  "max-w-[min(500px,85vw)]", // Corrected: relative to video width
+                  "md:flex hidden" // DESKTOP
+                )}
+              >
+                <span className={cn(
+                  "size-2 rounded-full animate-pulse shrink-0 mt-1",
+                  isError ? "bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,1)]" : "bg-primary shadow-[0_0_8px_rgba(19,236,91,1)]"
+                )}></span>
+                <span className="text-white font-bold uppercase tracking-wide feedback-shadow text-xs leading-tight">
+                  {event.description} {event.type === 'filler' && `(#${count})`}
+                </span>
+              </div>
+
+              {/* --- MOBILE VERSION --- */}
+              <div
+                className={cn(
+                  "absolute flex items-start gap-1 backdrop-blur-md bg-black/50 border border-white/20 shadow-lg w-max",
+                  horizontalClass.includes("left-0") ? "left-0" :
+                    horizontalClass.includes("right-0") ? "right-0" :
+                      "-translate-x-1/2",
+                  verticalClass.includes("bottom-full") ? "bottom-1.5" :
+                    verticalClass.includes("bottom-2") ? "bottom-1.5" :
+                      "top-1.5",
+                  "rounded-full px-2.5 py-1.5",
+                  "max-w-[70vw]",
+                  "md:hidden flex" // MOBILE
+                )}
+              >
+                <span className={cn(
+                  "size-1.5 rounded-full animate-pulse shrink-0 mt-0.5",
+                  isError ? "bg-yellow-500" : "bg-primary"
+                )}></span>
+                <span className={cn(
+                  "text-white font-bold uppercase tracking-wide text-[10px] leading-snug",
+                  textSizeClass
+                )}>
+                  {event.description}
+                </span>
+              </div>
             </div>
-          </div>
+          </React.Fragment>
         );
       })}
     </div>
@@ -169,4 +195,5 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
 };
 
 export default ResultsCanvas;
+
 
