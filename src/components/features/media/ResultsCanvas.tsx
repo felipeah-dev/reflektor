@@ -26,7 +26,7 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
   };
 
   return (
-    <div className="relative w-full h-full rounded-xl select-none">
+    <div className="relative w-full h-full rounded-xl select-none overflow-hidden">
       {activeEvents.map((event, index) => {
         if (!event.box_2d || event.box_2d.length !== 4) return null;
 
@@ -174,6 +174,10 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
                   "max-w-[70vw]",
                   "md:hidden flex" // MOBILE
                 )}
+                style={{
+                  marginTop: !verticalClass.includes("bottom") ? `${index * 2.8}rem` : undefined,
+                  marginBottom: verticalClass.includes("bottom") ? `${index * 2.8}rem` : undefined,
+                }}
               >
                 <span className={cn(
                   "size-1.5 rounded-full animate-pulse shrink-0 mt-0.5",
