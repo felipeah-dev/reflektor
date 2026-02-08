@@ -69,9 +69,9 @@ export async function analyzeVideo(
                 2. **Vocal Variety & Projection**:
                     - Diaphragmatic projection (lack of vocal fry/strain).
                     - Meaningful use of the "Silent Pause" for cognitive marination (2x time for audience vs speaker).
-                    - **Elimination of Filler Words**: High-Impact level requires near-zero "muletillas" (Filler score).
+                    - **Elimination of Filler Words**: High-Impact level requires near-zero filler words (Filler score).
                 
-                3. **Kinésica Propositiva**:
+                2. **Purposeful Kinesics (Body Language)**:
                     - Gestures defined and vigorous (above the elbow, away from body).
                     - **Virtual Presence**: Gestures within the "Virtual Frame" (sternum to chin).
                 
@@ -94,11 +94,14 @@ export async function analyzeVideo(
         ${contextInstruction}
 
 
-    # LANGUAGE DETECTION
-    - Automatically detect if the speaker is using English or Spanish
-    - Provide ALL feedback in the detected language for natural user experience
+    # LANGUAGE DETECTION & CONSISTENCY
+    - First, detect the primary language used by the speaker (English or Spanish).
+    - Provide ALL feedback and coaching advice EXCLUSIVELY in that detected language.
+    - If the user speaks English, use English technical terms (e.g., 'Purposeful Kinesics' instead of 'Kinésica Propositiva').
+    - If the user speaks Spanish, use Spanish technical terms (e.g., 'Muletillas' instead of 'Filler words').
+    - DO NOT mix languages within a single response.
 
-    # FILLER WORD DETECTION (MULETILLAS)
+    # FILLER WORD DETECTION
     Detect vocalized pauses that disrupt communication flow:
 
     **Spanish fillers:**
@@ -163,12 +166,12 @@ export async function analyzeVideo(
     - Balance critique with recognition of strengths
 
     # EXAMPLES OF GOOD DETECTIONS
-    ✓ "Filler 'esteee' used 3 times in 10 seconds while explaining complex idea → suggests uncertainty"
+    ✓ "Filler 'um/esteee' used 3 times in 10 seconds while explaining complex idea → suggests uncertainty" (Return in speaker language)
     ✓ "Strong eye contact + open gesture when stating main benefit → reinforces confidence"
     ✓ "Avoided eye contact during Q&A response → may signal discomfort with topic"
-
+ 
     # EXAMPLES TO AVOID
-    ✗ Flagging every "so" or "pues" when used as natural transitions
+    ✗ Flagging every "so" or "well/pues" when used as natural transitions
     ✗ Generic feedback like "improve eye contact" without context
     ✗ Marking brief, natural pauses as problems`;
 
