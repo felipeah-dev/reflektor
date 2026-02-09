@@ -87,7 +87,8 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
     <div className="relative w-full h-full rounded-xl select-none overflow-hidden">
       {/* --- DRAW ALL INDIVIDUAL BOUNDING BOXES --- */}
       {activeEvents.map((event, idx) => {
-        const [ymin, xmin, ymax, xmax] = event.box_2d!;
+        if (!event.box_2d) return null;
+        const [ymin, xmin, ymax, xmax] = event.box_2d;
         const isWarning = isWarningEvent(event);
 
         return (

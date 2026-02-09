@@ -209,7 +209,10 @@ export default function ResultsPage() {
             // 3. Draw Pill Stacks Cluster by Cluster
             exportClusters.forEach((cluster) => {
                 // Sort within cluster by vertical position
-                cluster.events.sort((a, b) => (a.box_2d![0] - b.box_2d![0]));
+                cluster.events.sort((a, b) => {
+                    if (!a.box_2d || !b.box_2d) return 0;
+                    return a.box_2d[0] - b.box_2d[0];
+                });
 
                 const hasBottomCollision = cluster.maxBottom > 800;
                 const hasTopCollision = cluster.minTop < 200;
