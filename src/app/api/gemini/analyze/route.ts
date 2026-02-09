@@ -69,6 +69,8 @@ export async function POST(req: NextRequest) {
             ? `The video is exactly ${totalDuration} seconds long. Ensure all timestamps in "start" and "end" are within 0 and ${totalDuration}.`
             : "";
 
+        let lastError = null;
+
         // Strategy: Try each API key. For each key, allow a small number of retries for 503/429.
         while (keyIndex < apiKeys.length) {
             const currentApiKey = apiKeys[keyIndex];
@@ -97,6 +99,7 @@ export async function POST(req: NextRequest) {
                 ]);
                 break; // If successful, exit the outer loop
             } catch (error: any) {
+                lastError = error;
                 const errorMessage = error.message || String(error);
                 const isOverloaded = errorMessage.includes("503") || errorMessage.includes("overloaded") || errorMessage.includes("429") || errorMessage.includes("quota");
 
@@ -127,7 +130,13 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        if (!result) throw new Error("Failed to initialize analysis after retries.");
+        if (!result) {
+            const isQuota = lastError?.message?.includes("429") || lastError?.message?.includes("quota") || lastError?.message?.includes("503");
+            return NextResponse.json({
+                error: isQuota ? 'QUOTA_EXHAUSTED' : (lastError?.message || 'Failed to initialize analysis'),
+                details: lastError?.toString()
+            }, { status: isQuota ? 429 : 500 });
+        }
 
         const response = await result.response;
         const fullText = response.text();

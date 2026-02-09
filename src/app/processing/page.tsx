@@ -49,6 +49,8 @@ export default function ProcessingPage() {
                 if (err.message?.includes("NETWORK_ERROR")) {
                     setStatusMsg("There was a connection issue. Don't worry, your video is saved locally. Please find a more stable network and try again.");
                     setIsNetworkFailure(true);
+                } else if (err.message?.includes("QUOTA_EXHAUSTED")) {
+                    setStatusMsg("The AI service is currently at maximum capacity (all keys exhausted). Please wait a few minutes or switch API keys in settings.");
                 } else {
                     setStatusMsg("Analysis failed. Please try again.");
                 }

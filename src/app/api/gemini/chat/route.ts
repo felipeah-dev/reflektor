@@ -35,6 +35,8 @@ export async function POST(req: NextRequest) {
         let keyIndex = 0;
         const MAX_RETRIES_PER_KEY = 2;
 
+        let lastError = null;
+
         while (keyIndex < apiKeys.length) {
             const currentApiKey = apiKeys[keyIndex];
             const genAI = new GoogleGenerativeAI(currentApiKey);
@@ -54,6 +56,7 @@ export async function POST(req: NextRequest) {
 
                 return NextResponse.json({ text: response.text() });
             } catch (error: any) {
+                lastError = error;
                 const errorMessage = error.message || String(error);
                 const isOverloaded = errorMessage.includes("503") || errorMessage.includes("overloaded") || errorMessage.includes("429") || errorMessage.includes("quota");
 
@@ -85,7 +88,10 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        throw new Error("Chat failed after model fallbacks.");
+        const isQuota = lastError?.message?.includes("429") || lastError?.message?.includes("quota") || lastError?.message?.includes("503");
+        return NextResponse.json({
+            error: isQuota ? 'QUOTA_EXHAUSTED' : (lastError?.message || 'Chat failed after model fallbacks.')
+        }, { status: isQuota ? 429 : 500 });
 
     } catch (error: any) {
         console.error("Chat API Error:", error);

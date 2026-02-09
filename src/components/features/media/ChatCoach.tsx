@@ -102,9 +102,14 @@ export function ChatCoach({ sessionData }: ChatCoachProps) {
         } catch (error: unknown) {
             const err = error as Error;
             console.error("Chat Error:", err);
-            const errorText = networkQuality === 'poor'
-                ? "Parece que hay problemas con tu conexión. No he podido procesar tu respuesta, ¿podrías reintentar?"
-                : "Lo siento, tuve un problema conectando con mi cerebro de IA. ¿Podrías intentar de nuevo?";
+
+            let errorText = "Lo siento, tuve un problema conectando con mi cerebro de IA. ¿Podrías intentar de nuevo?";
+
+            if (err.message?.includes("QUOTA_EXHAUSTED")) {
+                errorText = "Se ha agotado la cuota de todas las API keys disponibles. Por favor, intenta de nuevo en unos minutos.";
+            } else if (networkQuality === 'poor') {
+                errorText = "Parece que hay problemas con tu conexión. No he podido procesar tu respuesta, ¿podrías reintentar?";
+            }
 
             setMessages(prev => [...prev, {
                 role: 'model',

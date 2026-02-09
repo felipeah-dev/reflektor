@@ -914,7 +914,7 @@ export default function ResultsPage() {
                             ) : (
                                 <>
                                     <span className="material-symbols-outlined text-[20px]">movie_edit</span>
-                                    <span className="truncate">Descargar con Feedback</span>
+                                    <span className="truncate">Download with Feedback</span>
                                 </>
                             )}
                         </button>
