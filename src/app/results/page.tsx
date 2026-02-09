@@ -770,7 +770,7 @@ export default function ResultsPage() {
                                     Overall Performance
                                 </h3>
                                 <div className="flex items-baseline gap-2">
-                                    <span className="text-6xl font-bold text-primary">{session?.analysis?.summary?.score || 0}</span>
+                                    <span className="text-6xl font-bold text-primary">{Number(session?.analysis?.summary?.score || 0).toFixed(1)}</span>
                                     <span className="text-xl text-muted">/ 10</span>
                                 </div>
                                 <p className="text-white mt-2 leading-relaxed text-sm">

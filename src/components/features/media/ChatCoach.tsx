@@ -22,7 +22,7 @@ export function ChatCoach({ sessionData }: ChatCoachProps) {
     const [messages, setMessages] = useState<Message[]>([
         {
             role: 'model',
-            text: `Hi! I've analyzed your ${sessionData.scenario || 'practice'} session. I see you scored ${sessionData.analysis?.summary?.score || 0}/10. How can I help you improve today?`
+            text: `Hi! I've analyzed your ${sessionData.scenario || 'practice'} session. I see you scored ${Number(sessionData.analysis?.summary?.score || 0).toFixed(1)}/10. How can I help you improve today?`
         }
     ]);
     const [inputValue, setInputValue] = useState("");

@@ -82,7 +82,7 @@ export default function ActionPage() {
                                 </div>
                                 <div className="flex items-baseline gap-2">
                                     <span className="text-3xl font-bold text-white">
-                                        {session?.analysis?.summary?.score || 0}<span className="text-muted text-xl font-normal">/10</span>
+                                        {Number(session?.analysis?.summary?.score || 0).toFixed(1)}<span className="text-muted text-xl font-normal">/10</span>
                                     </span>
                                 </div>
                             </div>

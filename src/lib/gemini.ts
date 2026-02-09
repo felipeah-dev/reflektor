@@ -134,7 +134,7 @@ export async function analyzeVideo(
 
     {
     "summary": {
-        "score": <number 0-10>,
+        "score": <number 0-10, MUST include one decimal place e.g. 7.5, 6.8, 8.0>,
         "pace": <number, estimated words per minute>,
         "sentiment": "<positive/neutral/negative/mixed>",
         "eyeContact": <percentage 0-100>,

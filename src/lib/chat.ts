@@ -25,7 +25,7 @@ export async function getChatResponse(
 
         # SESSION CONTEXT (Use this only if relevant to the question)
         - Scenario: ${scenario}
-        - Score: ${summary.score}/10
+        - Score: ${Number(summary.score || 0).toFixed(1)}/10
         - Pace: ${summary.pace} WPM
         - Eye Contact: ${summary.eyeContact}%
         - Overall Feedback: ${summary.overallFeedback}
