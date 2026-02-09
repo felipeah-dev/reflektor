@@ -35,28 +35,52 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
     );
   };
 
-  // 1. Group events by horizontal zone to prevent overlaps between different boxes in the same area
-  const zones: Record<string, { events: AnalysisEvent[], minTop: number, maxBottom: number, centerAvg: number }> = {
-    left: { events: [], minTop: 1000, maxBottom: 0, centerAvg: 0 },
-    center: { events: [], minTop: 1000, maxBottom: 0, centerAvg: 0 },
-    right: { events: [], minTop: 1000, maxBottom: 0, centerAvg: 0 },
-  };
+  // 1. Group events into horizontal clusters based on box overlap
+  let clusters: { events: AnalysisEvent[], minTop: number, maxBottom: number, minLeft: number, maxRight: number }[] = [];
 
   activeEvents.forEach(event => {
     if (!event.box_2d) return;
     const [ymin, xmin, ymax, xmax] = event.box_2d;
-    const center = (xmin + xmax) / 20; // 0-100
-    const isWarning = isWarningEvent(event);
+    const l = xmin / 10;
+    const r = xmax / 10;
+    const t = ymin / 10;
+    const b = ymax / 10;
 
-    let zoneKey = 'center';
-    if (center < 33) zoneKey = 'left';
-    else if (center > 66) zoneKey = 'right';
+    clusters.push({
+      events: [event],
+      minTop: t,
+      maxBottom: b,
+      minLeft: l,
+      maxRight: r
+    });
+  });
 
-    const zone = zones[zoneKey];
-    zone.events.push(event);
-    zone.minTop = Math.min(zone.minTop, ymin / 10);
-    zone.maxBottom = Math.max(zone.maxBottom, ymax / 10);
-    zone.centerAvg = (xmin + xmax) / 20; // Simplified for the anchor
+  // Merge clusters that overlap horizontally (with 5% safety buffer)
+  let merged = true;
+  while (merged) {
+    merged = false;
+    for (let i = 0; i < clusters.length; i++) {
+      for (let j = i + 1; j < clusters.length; j++) {
+        const overlap = !(clusters[i].maxRight + 5 < clusters[j].minLeft || clusters[i].minLeft - 5 > clusters[j].maxRight);
+        if (overlap) {
+          clusters[i].events.push(...clusters[j].events);
+          clusters[i].minTop = Math.min(clusters[i].minTop, clusters[j].minTop);
+          clusters[i].maxBottom = Math.max(clusters[i].maxBottom, clusters[j].maxBottom);
+          clusters[i].minLeft = Math.min(clusters[i].minLeft, clusters[j].minLeft);
+          clusters[i].maxRight = Math.max(clusters[i].maxRight, clusters[j].maxRight);
+          clusters.splice(j, 1);
+          merged = true;
+          break;
+        }
+      }
+      if (merged) break;
+    }
+  }
+
+  // 2. Sort events within each cluster by their vertical position (ymin)
+  // This ensures face messages (top) stay at the top of the stack, etc.
+  clusters.forEach(cluster => {
+    cluster.events.sort((a, b) => (a.box_2d![0] - b.box_2d![0]));
   });
 
   return (
@@ -84,47 +108,45 @@ const ResultsCanvas: React.FC<ResultsCanvasProps> = ({ analysisData = [], curren
         );
       })}
 
-      {/* --- DRAW PILL STACKS BY ZONE --- */}
-      {Object.entries(zones).map(([zoneKey, zone]) => {
-        if (zone.events.length === 0) return null;
+      {/* --- DRAW CLUSTERED PILL STACKS --- */}
+      {clusters.map((cluster, cIdx) => {
+        const hasBottomCollision = cluster.maxBottom > 80;
+        const hasTopCollision = cluster.minTop < 20;
 
-        // Determine if we should stack above, below, or inside
-        // If any box is at the bottom, stack the whole zone ABOVE
-        // If boxes are both at top and bottom, anchor INSIDE bottom
-        const hasBottomCollision = zone.maxBottom > 85;
-        const hasTopCollision = zone.minTop < 15;
-
-        let stackPosition = 'below'; // default
+        let stackPosition = 'below';
         if (hasBottomCollision && !hasTopCollision) stackPosition = 'above';
         else if (hasBottomCollision && hasTopCollision) stackPosition = 'inside';
         else if (hasTopCollision) stackPosition = 'below';
 
-        const horizontalClass = zoneKey === 'left' ? "left-0" :
-          zoneKey === 'right' ? "right-0" :
-            "left-1/2 -translate-x-1/2";
+        // Final ceiling safety
+        if (stackPosition === 'above' && cluster.minTop < 25) {
+          stackPosition = hasTopCollision ? 'inside' : 'below';
+        }
+
+        const centerX = (cluster.minLeft + cluster.maxRight) / 2;
+        const isLeft = centerX < 30;
+        const isRight = centerX > 70;
 
         return (
           <div
-            key={`stack-${zoneKey}`}
+            key={`cluster-${cIdx}`}
             className={cn(
               "absolute z-30 flex flex-col pointer-events-none transition-all duration-300 px-4",
-              horizontalClass,
-              stackPosition === 'above' ? "flex-col-reverse" : "flex-col"
+              isLeft ? "left-0" : isRight ? "right-0" : "left-1/2 -translate-x-1/2"
             )}
             style={{
-              top: stackPosition === 'above' ? `${zone.minTop}%` :
+              top: stackPosition === 'above' ? `${cluster.minTop}%` :
                 stackPosition === 'inside' ? undefined :
-                  `${zone.maxBottom}%`,
-              bottom: stackPosition === 'inside' ? '1rem' : undefined,
-              // Offset from top/bottom to not touch box
+                  `${cluster.maxBottom}%`,
+              bottom: stackPosition === 'inside' ? `${Math.max(10, (100 - cluster.maxBottom) + 2)}%` : undefined,
               marginTop: stackPosition === 'below' ? '0.5rem' : undefined,
-              marginBottom: stackPosition === 'above' ? '0.5rem' : undefined,
-              alignItems: zoneKey === 'left' ? 'flex-start' :
-                zoneKey === 'right' ? 'flex-end' : 'center',
-              width: 'max-content'
+              marginBottom: (stackPosition === 'above' || stackPosition === 'inside') ? '0.5rem' : undefined,
+              alignItems: isLeft ? 'flex-start' : isRight ? 'flex-end' : 'center',
+              width: 'max-content',
+              maxWidth: '90vw'
             }}
           >
-            {zone.events.map((event, eIdx) => {
+            {cluster.events.map((event, eIdx) => {
               const isWarning = isWarningEvent(event);
               const count = getEventCount(event);
 

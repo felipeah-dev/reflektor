@@ -169,44 +169,79 @@ export default function ResultsPage() {
                 ctx.stroke();
             });
 
-            // 2. Group events into Zones for Pill Stacking
-            const zonesInExport: Record<string, { events: AnalysisEvent[], minTop: number, maxBottom: number }> = {
-                left: { events: [], minTop: 1000, maxBottom: 0 },
-                center: { events: [], minTop: 1000, maxBottom: 0 },
-                right: { events: [], minTop: 1000, maxBottom: 0 }
-            };
+            // 2. Group events into Clusters for Pill Stacking
+            let exportClusters: { events: AnalysisEvent[], minTop: number, maxBottom: number, minLeft: number, maxRight: number }[] = [];
 
             activeEvents.forEach((e: AnalysisEvent) => {
                 if (!e.box_2d) return;
                 const [ymin, xmin, ymax, xmax] = e.box_2d;
-                const center = (xmin + xmax) / 2;
-                let zoneKey = 'center';
-                if (center < 333) zoneKey = 'left';
-                else if (center > 666) zoneKey = 'right';
-
-                const zone = zonesInExport[zoneKey];
-                zone.events.push(e);
-                zone.minTop = Math.min(zone.minTop, ymin);
-                zone.maxBottom = Math.max(zone.maxBottom, ymax);
+                exportClusters.push({
+                    events: [e],
+                    minTop: ymin,
+                    maxBottom: ymax,
+                    minLeft: xmin,
+                    maxRight: xmax
+                });
             });
 
-            // 3. Draw Pill Stacks Zone by Zone
-            Object.entries(zonesInExport).forEach(([zoneKey, zone]) => {
-                if (zone.events.length === 0) return;
+            // Merge intersecting clusters horizontally
+            let eMerged = true;
+            while (eMerged) {
+                eMerged = false;
+                for (let i = 0; i < exportClusters.length; i++) {
+                    for (let j = i + 1; j < exportClusters.length; j++) {
+                        const overlap = !(exportClusters[i].maxRight + 50 < exportClusters[j].minLeft || exportClusters[i].minLeft - 50 > exportClusters[j].maxRight);
+                        if (overlap) {
+                            exportClusters[i].events.push(...exportClusters[j].events);
+                            exportClusters[i].minTop = Math.min(exportClusters[i].minTop, exportClusters[j].minTop);
+                            exportClusters[i].maxBottom = Math.max(exportClusters[i].maxBottom, exportClusters[j].maxBottom);
+                            exportClusters[i].minLeft = Math.min(exportClusters[i].minLeft, exportClusters[j].minLeft);
+                            exportClusters[i].maxRight = Math.max(exportClusters[i].maxRight, exportClusters[j].maxRight);
+                            exportClusters.splice(j, 1);
+                            eMerged = true;
+                            break;
+                        }
+                    }
+                    if (eMerged) break;
+                }
+            }
 
-                const hasBottomCollision = zone.maxBottom > 850;
-                const hasTopCollision = zone.minTop < 150;
-                const stackAbove = hasBottomCollision && !hasTopCollision;
-                const stackInside = hasBottomCollision && hasTopCollision;
+            // 3. Draw Pill Stacks Cluster by Cluster
+            exportClusters.forEach((cluster) => {
+                // Sort within cluster by vertical position
+                cluster.events.sort((a, b) => (a.box_2d![0] - b.box_2d![0]));
+
+                const hasBottomCollision = cluster.maxBottom > 800;
+                const hasTopCollision = cluster.minTop < 200;
+                let stackAbove = hasBottomCollision && !hasTopCollision;
+                let stackInside = hasBottomCollision && hasTopCollision;
+
+                // Ceiling safety
+                if (stackAbove && cluster.minTop < 250) {
+                    stackAbove = false;
+                    stackInside = hasTopCollision;
+                }
 
                 let currentYOffset = 0;
                 const margin = 10 * scale;
+                const topSafetyMargin = 20 * scale;
 
-                // For stacking ABOVE, we need to process events in reverse to stack them upwards
-                const displayEvents = stackAbove ? [...zone.events].reverse() : zone.events;
+                // Position anchor
+                const centerX = (cluster.minLeft + cluster.maxRight) / 2;
+                const isLeft = centerX < 300;
+                const isRight = centerX > 700;
+
+                // For stacking ABOVE or INSIDE, we want the first item (topmost) to be at the TOP of the stack.
+                // Since we calculate from Bottom -> Up, we must reverse the array to draw 
+                // the bottom-most pill first (at the anchor) and the top-most last (at the top).
+                const displayEvents = (stackAbove || stackInside) ? [...cluster.events].reverse() : cluster.events;
 
                 displayEvents.forEach((event: AnalysisEvent) => {
-                    const isError = event.type === 'filler' || event.severity === 'high';
+                    const isError = event.type === 'filler' ||
+                        event.type === 'spatial_warning' ||
+                        event.type === 'pace_issue' ||
+                        event.severity === 'high' ||
+                        event.severity === 'medium';
                     const color = isError ? "#eab308" : "#13ec5b";
                     const count = events.filter((e: AnalysisEvent) => e.type === event.type && e.start <= event.start).length;
                     const labelText = `${event.description}${event.type === 'filler' ? ` (#${count})` : ''}`.toUpperCase();
@@ -240,19 +275,27 @@ export default function ResultsPage() {
 
                     // Horizontal positioning
                     let pillX;
-                    if (zoneKey === 'left') pillX = 20 * scale;
-                    else if (zoneKey === 'right') pillX = canvas.width - pillWidth - (20 * scale);
-                    else pillX = (canvas.width - pillWidth) / 2;
+                    if (isLeft) pillX = (cluster.minLeft / 1000) * canvas.width;
+                    else if (isRight) pillX = (cluster.maxRight / 1000) * canvas.width - pillWidth;
+                    else pillX = (centerX / 1000) * canvas.width - (pillWidth / 2);
+
+                    // Clamp horizontal
+                    pillX = Math.max(10 * scale, Math.min(canvas.width - pillWidth - (10 * scale), pillX));
 
                     // Vertical calculation
                     let pillY;
                     if (stackAbove) {
-                        pillY = (zone.minTop / 1000) * canvas.height - pillHeight - (20 * scale) - currentYOffset;
+                        pillY = (cluster.minTop / 1000) * canvas.height - pillHeight - (15 * scale) - currentYOffset;
                     } else if (stackInside) {
-                        pillY = canvas.height - pillHeight - (10 * scale) - currentYOffset;
+                        // Anchored to bottom of the cluster with a safety offset
+                        pillY = (cluster.maxBottom / 1000) * canvas.height - pillHeight - (15 * scale) - currentYOffset;
                     } else {
-                        pillY = (zone.maxBottom / 1000) * canvas.height + (20 * scale) + currentYOffset;
+                        pillY = (cluster.maxBottom / 1000) * canvas.height + (15 * scale) + currentYOffset;
                     }
+
+                    // FINAL EDGE SAFETY CLAMPING
+                    pillY = Math.max(topSafetyMargin, Math.min(canvas.height - pillHeight - topSafetyMargin, pillY));
+
                     currentYOffset += pillHeight + margin;
 
                     // Draw Pill Background
