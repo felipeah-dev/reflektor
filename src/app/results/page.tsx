@@ -145,6 +145,7 @@ export default function ResultsPage() {
             const events = session.analysis?.events || [];
             const activeEvents = events.filter((e: AnalysisEvent) => currentTime >= e.start && currentTime <= e.end);
 
+            // 1. First, Draw ALL Bounding Boxes for ALL active events
             activeEvents.forEach((event: AnalysisEvent) => {
                 if (!event.box_2d) return;
                 const [ymin, xmin, ymax, xmax] = event.box_2d;
@@ -153,97 +154,135 @@ export default function ResultsPage() {
                 const w = ((xmax - xmin) / 1000) * canvas.width;
                 const h = ((ymax - ymin) / 1000) * canvas.height;
 
-                const isError = event.type === 'filler' ||
+                const isWarning = event.type === 'filler' ||
                     event.type === 'spatial_warning' ||
-                    event.type === 'pace_issue';
-                const color = isError ? "#eab308" : "#13ec5b";
+                    event.type === 'pace_issue' ||
+                    event.severity === 'high' ||
+                    event.severity === 'medium';
 
-                // --- Draw Bounding Box (rounded-3xl style) ---
                 ctx.beginPath();
-                const boxRadius = 32 * scale; // Proportional to rounded-3xl
-                if (ctx.roundRect) {
-                    ctx.roundRect(x, y, w, h, boxRadius);
-                } else {
-                    ctx.rect(x, y, w, h);
-                }
-                ctx.strokeStyle = isError ? "rgba(234, 179, 8, 0.4)" : "rgba(19, 236, 91, 0.6)";
+                const boxRadius = 32 * scale;
+                if (ctx.roundRect) ctx.roundRect(x, y, w, h, boxRadius);
+                else ctx.rect(x, y, w, h);
+                ctx.strokeStyle = isWarning ? "rgba(234, 179, 8, 0.4)" : "rgba(19, 236, 91, 0.6)";
                 ctx.lineWidth = 3 * scale;
                 ctx.stroke();
+            });
 
-                // --- Draw Feedback Pill with wrapping logic ---
-                const count = events.filter((e: AnalysisEvent) => e.type === event.type && e.start <= event.start).length;
-                const labelText = `${event.description}${event.type === 'filler' ? ` (#${count})` : ''}`.toUpperCase();
+            // 2. Group events into Zones for Pill Stacking
+            const zonesInExport: Record<string, { events: AnalysisEvent[], minTop: number, maxBottom: number }> = {
+                left: { events: [], minTop: 1000, maxBottom: 0 },
+                center: { events: [], minTop: 1000, maxBottom: 0 },
+                right: { events: [], minTop: 1000, maxBottom: 0 }
+            };
 
-                const fontSize = Math.max(11, 13 * scale);
-                ctx.font = `bold ${fontSize}px 'Space Grotesk', sans-serif`;
+            activeEvents.forEach((e: AnalysisEvent) => {
+                if (!e.box_2d) return;
+                const [ymin, xmin, ymax, xmax] = e.box_2d;
+                const center = (xmin + xmax) / 2;
+                let zoneKey = 'center';
+                if (center < 333) zoneKey = 'left';
+                else if (center > 666) zoneKey = 'right';
 
-                const maxPillWidth = 350 * scale;
-                const pillPaddingX = 22 * scale;
-                const pillPaddingY = 14 * scale;
-                const lineSpacing = 4 * scale;
+                const zone = zonesInExport[zoneKey];
+                zone.events.push(e);
+                zone.minTop = Math.min(zone.minTop, ymin);
+                zone.maxBottom = Math.max(zone.maxBottom, ymax);
+            });
 
-                // Text wrapping logic for Canvas
-                const words = labelText.split(' ');
-                const lines: string[] = [];
-                let currentLine = words[0];
+            // 3. Draw Pill Stacks Zone by Zone
+            Object.entries(zonesInExport).forEach(([zoneKey, zone]) => {
+                if (zone.events.length === 0) return;
 
-                for (let i = 1; i < words.length; i++) {
-                    const testLine = currentLine + " " + words[i];
-                    const metrics = ctx.measureText(testLine);
-                    if (metrics.width > (maxPillWidth - (pillPaddingX * 3))) {
-                        lines.push(currentLine);
-                        currentLine = words[i];
-                    } else {
-                        currentLine = testLine;
+                const hasBottomCollision = zone.maxBottom > 850;
+                const hasTopCollision = zone.minTop < 150;
+                const stackAbove = hasBottomCollision && !hasTopCollision;
+                const stackInside = hasBottomCollision && hasTopCollision;
+
+                let currentYOffset = 0;
+                const margin = 10 * scale;
+
+                // For stacking ABOVE, we need to process events in reverse to stack them upwards
+                const displayEvents = stackAbove ? [...zone.events].reverse() : zone.events;
+
+                displayEvents.forEach((event: AnalysisEvent) => {
+                    const isError = event.type === 'filler' || event.severity === 'high';
+                    const color = isError ? "#eab308" : "#13ec5b";
+                    const count = events.filter((e: AnalysisEvent) => e.type === event.type && e.start <= event.start).length;
+                    const labelText = `${event.description}${event.type === 'filler' ? ` (#${count})` : ''}`.toUpperCase();
+
+                    const fontSize = Math.max(11, 13 * scale);
+                    ctx.font = `bold ${fontSize}px 'Space Grotesk', sans-serif`;
+
+                    const maxPillWidth = 350 * scale;
+                    const pillPaddingX = 22 * scale;
+                    const pillPaddingY = 14 * scale;
+                    const lineSpacing = 4 * scale;
+
+                    const words = labelText.split(' ');
+                    const lines: string[] = [];
+                    let currentLine = words[0];
+                    for (let i = 1; i < words.length; i++) {
+                        const testLine = currentLine + " " + words[i];
+                        const metrics = ctx.measureText(testLine);
+                        if (metrics.width > (maxPillWidth - (pillPaddingX * 3))) {
+                            lines.push(currentLine);
+                            currentLine = words[i];
+                        } else {
+                            currentLine = testLine;
+                        }
                     }
-                }
-                lines.push(currentLine);
+                    lines.push(currentLine);
 
-                // Calculate vertical size
-                const textHeight = (lines.length * fontSize) + ((lines.length - 1) * lineSpacing);
-                const pillHeight = textHeight + (pillPaddingY * 2);
+                    const textHeight = (lines.length * fontSize) + ((lines.length - 1) * lineSpacing);
+                    const pillHeight = textHeight + (pillPaddingY * 2);
+                    const pillWidth = lines.reduce((max, line) => Math.max(max, ctx.measureText(line).width), 0) + (pillPaddingX * 3);
 
-                // Calculate horizontal size based on longest line
-                const maxLineWidth = lines.reduce((max, line) => Math.max(max, ctx.measureText(line).width), 0);
-                const pillWidth = maxLineWidth + (pillPaddingX * 3);
+                    // Horizontal positioning
+                    let pillX;
+                    if (zoneKey === 'left') pillX = 20 * scale;
+                    else if (zoneKey === 'right') pillX = canvas.width - pillWidth - (20 * scale);
+                    else pillX = (canvas.width - pillWidth) / 2;
 
-                const pillX = Math.max(10, Math.min(canvas.width - pillWidth - 10, x + (w / 2) - (pillWidth / 2)));
-                const pillY = y - pillHeight - (20 * scale);
+                    // Vertical calculation
+                    let pillY;
+                    if (stackAbove) {
+                        pillY = (zone.minTop / 1000) * canvas.height - pillHeight - (20 * scale) - currentYOffset;
+                    } else if (stackInside) {
+                        pillY = canvas.height - pillHeight - (10 * scale) - currentYOffset;
+                    } else {
+                        pillY = (zone.maxBottom / 1000) * canvas.height + (20 * scale) + currentYOffset;
+                    }
+                    currentYOffset += pillHeight + margin;
 
-                // Draw Background Pill (glass-pill style)
-                ctx.beginPath();
-                const radius = lines.length > 1 ? 16 * scale : pillHeight / 2;
-                if (ctx.roundRect) {
-                    ctx.roundRect(pillX, pillY, pillWidth, pillHeight, radius);
-                } else {
-                    ctx.rect(pillX, pillY, pillWidth, pillHeight);
-                }
-                ctx.fillStyle = "rgba(10, 20, 15, 0.95)"; // Darker for better contrast in export
-                ctx.fill();
-                ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
-                ctx.lineWidth = 1 * scale;
-                ctx.stroke();
+                    // Draw Pill Background
+                    ctx.beginPath();
+                    const radius = lines.length > 1 ? 16 * scale : pillHeight / 2;
+                    if (ctx.roundRect) ctx.roundRect(pillX, pillY, pillWidth, pillHeight, radius);
+                    else ctx.rect(pillX, pillY, pillWidth, pillHeight);
+                    ctx.fillStyle = "rgba(10, 20, 15, 0.95)";
+                    ctx.fill();
+                    ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+                    ctx.lineWidth = 1 * scale;
+                    ctx.stroke();
 
-                // Draw status indicator (dot) aligned with the first line
-                const dotSize = 4 * scale;
-                const dotX = pillX + pillPaddingX;
-                const dotY = pillY + pillPaddingY + (fontSize / 2);
-                ctx.beginPath();
-                ctx.arc(dotX, dotY, dotSize, 0, Math.PI * 2);
-                ctx.fillStyle = color;
-                ctx.shadowBlur = 10 * scale;
-                ctx.shadowColor = color;
-                ctx.fill();
-                ctx.shadowBlur = 0;
+                    // Draw Dot
+                    const dotSize = 4 * scale;
+                    const dotX = pillX + pillPaddingX;
+                    const dotY = pillY + pillPaddingY + (fontSize / 2);
+                    ctx.beginPath(); ctx.arc(dotX, dotY, dotSize, 0, Math.PI * 2);
+                    ctx.fillStyle = color;
+                    ctx.shadowBlur = 10 * scale; ctx.shadowColor = color; ctx.fill();
+                    ctx.shadowBlur = 0;
 
-                // Draw multi-line text
-                ctx.fillStyle = "white";
-                ctx.textAlign = "left";
-                lines.forEach((line, index) => {
-                    const lineY = pillY + pillPaddingY + (index * (fontSize + lineSpacing)) + (fontSize * 0.82);
-                    ctx.fillText(line, dotX + (dotSize * 3), lineY);
+                    // Draw Lines
+                    ctx.fillStyle = "white";
+                    ctx.textAlign = "left";
+                    lines.forEach((line, index) => {
+                        const lineY = pillY + pillPaddingY + (index * (fontSize + lineSpacing)) + (fontSize * 0.82);
+                        ctx.fillText(line, dotX + (dotSize * 3), lineY);
+                    });
                 });
-                ctx.textAlign = "left"; // Reset for next items
             });
 
             if (!hiddenVideo.paused && !hiddenVideo.ended) {
@@ -558,7 +597,9 @@ export default function ResultsPage() {
                                     {(session?.analysis?.events || []).map((event: AnalysisEvent, idx: number) => {
                                         const isWarning = event.type === 'filler' ||
                                             event.type === 'spatial_warning' ||
-                                            event.type === 'pace_issue';
+                                            event.type === 'pace_issue' ||
+                                            event.severity === 'high' ||
+                                            event.severity === 'medium';
                                         return (
                                             <div
                                                 key={idx}
